@@ -356,12 +356,7 @@ const AddStationsPage = GObject.registerClass(
             this._stations = stations;
         }
 
-        vfunc_dispose() {
-            this._cleanup();
-            super.vfunc_dispose();
-        }
-
-        _cleanup() {
+        destroy() {
             this._cancelSearchDebounce();
             if (this._idleSourceId) {
                 GLib.source_remove(this._idleSourceId);
@@ -371,6 +366,7 @@ const AddStationsPage = GObject.registerClass(
                 this._client.destroy();
                 this._client = null;
             }
+            super.destroy();
         }
 
         _cancelSearchDebounce() {
@@ -796,6 +792,11 @@ export default class YetAnotherRadioPreferences extends ExtensionPreferences {
         toolbarView.set_content(viewStack);
 
         window.set_content(toolbarView);
+
+        window.connect('close-request', () => {
+            addStationsPage.destroy();
+            return false;
+        });
     }
 }
 
