@@ -20,7 +20,7 @@ This extension uses [Radio Browser](https://www.radio-browser.info/)'s API to fe
 - Add custom stations manually
 - Import/Export station lists
 - View track metadata, album art, and bitrate
-- Play/pause controls
+- Play/Pause controls
 
 
 ## Installation
