@@ -1,7 +1,7 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# Yet Another Radio translation template.
+# Copyright (C) YEAR Mahyar Darvishi
 # This file is distributed under the same license as the Yet Another Radio package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Mahyar Darvishi <darvishi1382@gmail.com>, 2025.
 #
 #, fuzzy
 msgid ""
