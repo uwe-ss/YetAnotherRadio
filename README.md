@@ -29,6 +29,10 @@ Install it via [Gnome Extensions website](https://extensions.gnome.org/extension
 
 Or Copy the extension directory to `~/.local/share/gnome-shell/extensions/` and enable it via GNOME Extensions.
 
+## Translating
+
+If you would like to help translate Yet Another Radio into your language, see the detailed instructions in [TRANSLATING.md](TRANSLATING.md).
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 or later (GPL-3.0+).

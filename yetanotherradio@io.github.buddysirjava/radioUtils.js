@@ -1,6 +1,9 @@
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup';
 
+const DOMAIN = 'yetanotherradio@io.github.buddysirjava';
+const _ = (s) => GLib.dgettext(DOMAIN, s);
+
 export const USER_AGENT = 'yetanotherradio-extension/1.0';
 export const STORAGE_PATH = GLib.build_filenamev([
     GLib.get_user_state_dir(),
@@ -20,7 +23,7 @@ export function ensureStorageFile() {
         }
     } catch (error) {
         console.error('Failed to ensure storage file exists', error);
-        throw new Error('Could not create storage directory. Check file permissions.');
+        throw new Error(_('Could not create storage directory. Check file permissions.'));
     }
 }
 
@@ -71,14 +74,14 @@ export function saveStations(stations) {
     } catch (error) {
         console.error('Failed to save stations', error);
         if (error.code === GLib.IOErrorEnum.PERMISSION_DENIED) {
-            throw new Error('Permission denied. Cannot save stations file.');
+            throw new Error(_('Permission denied. Cannot save stations file.'));
         }
-        throw new Error(`Failed to save stations: ${error.message || 'Unknown error'}`);
+        throw new Error(_('Failed to save stations: %s').format(error.message || _('Unknown error')));
     }
 }
 
 export function stationDisplayName(station) {
-    const base = station?.name?.trim() || station?.url || 'Unnamed station';
+    const base = station?.name?.trim() || station?.url || _('Unnamed station');
     const country = station?.countrycode ? ` (${station.countrycode})` : '';
     return `${base}${country}`;
 }
@@ -136,25 +139,25 @@ export class RadioBrowserClient {
 
         if (lastError) {
             if (lastError.message && lastError.message.includes('timeout')) {
-                throw new Error('Network request timed out. Please check your internet connection.');
+                throw new Error(_('Network request timed out. Please check your internet connection.'));
             }
-            throw new Error('All radio servers failed to respond. Please try again later.');
+            throw new Error(_('All radio servers failed to respond. Please try again later.'));
         }
-        throw new Error('All radio servers failed to respond.');
+        throw new Error(_('All radio servers failed to respond.'));
     }
 
     async _ensureServers() {
         if (this._servers?.length)
             return;
 
-        const payload = await this._fetchJson('http://all.api.radio-browser.info/json/servers');
+        const payload = await this._fetchJson('https://all.api.radio-browser.info/json/servers');
         const hosts = payload
             .map(server => server?.name)
             .filter(Boolean)
             .map(name => `https://${name}`);
 
         if (!hosts.length)
-            throw new Error('Radio Browser server list is empty.');
+            throw new Error(_('Radio Browser server list is empty.'));
 
         this._servers = hosts;
     }
@@ -173,7 +176,7 @@ export class RadioBrowserClient {
                         resolve(data.toArray());
                     } catch (error) {
                         if (error.message && error.message.includes('timeout')) {
-                            reject(new Error('Network request timed out. Please check your internet connection.'));
+                            reject(new Error(_('Network request timed out. Please check your internet connection.')));
                         } else {
                             reject(error);
                         }
@@ -184,18 +187,18 @@ export class RadioBrowserClient {
 
         if (message.status_code < 200 || message.status_code >= 300) {
             if (message.status_code === 404) {
-                throw new Error('Resource not found. The server may be unavailable.');
+                throw new Error(_('Resource not found. The server may be unavailable.'));
             } else if (message.status_code >= 500) {
-                throw new Error('Server error. Please try again later.');
+                throw new Error(_('Server error. Please try again later.'));
             } else {
-                throw new Error(`Request failed with status ${message.status_code}`);
+                throw new Error(_('Request failed with status %d').format(message.status_code));
             }
         }
 
         try {
             return JSON.parse(new TextDecoder().decode(bytes));
         } catch (error) {
-            throw new Error('Invalid response from server.');
+            throw new Error(_('Invalid response from server.'));
         }
     }
 

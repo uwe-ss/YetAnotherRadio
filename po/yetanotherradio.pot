@@ -1,420 +1,381 @@
-# Yet Another Radio translation template.
-# Copyright (C) YEAR Mahyar Darvishi
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the Yet Another Radio package.
-# Mahyar Darvishi <darvishi1382@gmail.com>, 2025.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: Yet Another Radio\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-24 13:04+0330\n"
+"POT-Creation-Date: 2025-11-27 22:05+0330\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: xgettext\n"
-"X-Gettext-Domain: yetanotherradio@io.github.buddysirjava\n"
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:25
+#: yetanotherradio@io.github.buddysirjava/extension.js:20
 msgid "Yet Another Radio"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:61
-#: yetanotherradio@io.github.buddysirjava/extension.js:594
+#: yetanotherradio@io.github.buddysirjava/extension.js:52
+#: yetanotherradio@io.github.buddysirjava/extension.js:438
 msgid "Pause"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:84
+#: yetanotherradio@io.github.buddysirjava/extension.js:70
 msgid "Open preferences"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:88
+#: yetanotherradio@io.github.buddysirjava/extension.js:74
 msgid "Use preferences to add stations."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:237
+#: yetanotherradio@io.github.buddysirjava/extension.js:143
 msgid "Unknown title"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:238
+#: yetanotherradio@io.github.buddysirjava/extension.js:144
 msgid "Unknown artist"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:375
+#: yetanotherradio@io.github.buddysirjava/extension.js:271
 msgid "No saved stations yet. Use preferences to add some."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:491
+#: yetanotherradio@io.github.buddysirjava/extension.js:341
 msgid "Could not play the selected station."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:501
-#: yetanotherradio@io.github.buddysirjava/extension.js:579
+#: yetanotherradio@io.github.buddysirjava/extension.js:351
+#: yetanotherradio@io.github.buddysirjava/extension.js:423
 msgid "Playback error"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:573
+#: yetanotherradio@io.github.buddysirjava/extension.js:417
 #, javascript-format
 msgid "Playing %s"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:578
+#: yetanotherradio@io.github.buddysirjava/extension.js:422
 msgid "Could not start the selected station."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/extension.js:596
+#: yetanotherradio@io.github.buddysirjava/extension.js:440
 msgid "Resume"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:17
-#: yetanotherradio@io.github.buddysirjava/prefs.js:803
-#: yetanotherradio@io.github.buddysirjava/prefs.js:819
+#: yetanotherradio@io.github.buddysirjava/prefs.js:15
+#: yetanotherradio@io.github.buddysirjava/prefs.js:738
+#: yetanotherradio@io.github.buddysirjava/prefs.js:749
 msgid "Saved Stations"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:24
+#: yetanotherradio@io.github.buddysirjava/prefs.js:22
 msgid "Saved stations"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:25
+#: yetanotherradio@io.github.buddysirjava/prefs.js:23
 msgid "These stations appear in the panel indicator menu."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:43
+#: yetanotherradio@io.github.buddysirjava/prefs.js:41
 msgid "No stations saved yet."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:44
+#: yetanotherradio@io.github.buddysirjava/prefs.js:42
 msgid "Use the Add Stations tab to add some."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:65
+#: yetanotherradio@io.github.buddysirjava/prefs.js:63
 msgid "Edit"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:74
+#: yetanotherradio@io.github.buddysirjava/prefs.js:72
 msgid "Move up"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:84
+#: yetanotherradio@io.github.buddysirjava/prefs.js:82
 msgid "Move down"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:93
+#: yetanotherradio@io.github.buddysirjava/prefs.js:91
 msgid "Remove from favorites"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:93
+#: yetanotherradio@io.github.buddysirjava/prefs.js:91
 msgid "Add to favorites"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:101
-#: yetanotherradio@io.github.buddysirjava/prefs.js:129
+#: yetanotherradio@io.github.buddysirjava/prefs.js:99
+#: yetanotherradio@io.github.buddysirjava/prefs.js:127
 msgid "Remove"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:122
+#: yetanotherradio@io.github.buddysirjava/prefs.js:120
 msgid "Remove Station?"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:123
+#: yetanotherradio@io.github.buddysirjava/prefs.js:121
 #, javascript-format
 msgid "Are you sure you want to remove \"%s\"?"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:128
-#: yetanotherradio@io.github.buddysirjava/prefs.js:179
+#: yetanotherradio@io.github.buddysirjava/prefs.js:126
+#: yetanotherradio@io.github.buddysirjava/prefs.js:177
 msgid "Cancel"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:152
+#: yetanotherradio@io.github.buddysirjava/prefs.js:150
 msgid "Edit Station"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:153
+#: yetanotherradio@io.github.buddysirjava/prefs.js:151
 msgid "Edit station details"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:160
-#: yetanotherradio@io.github.buddysirjava/prefs.js:333
+#: yetanotherradio@io.github.buddysirjava/prefs.js:158
+#: yetanotherradio@io.github.buddysirjava/prefs.js:331
 msgid "Station name"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:165
-#: yetanotherradio@io.github.buddysirjava/prefs.js:338
+#: yetanotherradio@io.github.buddysirjava/prefs.js:163
+#: yetanotherradio@io.github.buddysirjava/prefs.js:336
 msgid "Stream URL"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:180
-#: yetanotherradio@io.github.buddysirjava/prefs.js:695
+#: yetanotherradio@io.github.buddysirjava/prefs.js:178
+#: yetanotherradio@io.github.buddysirjava/prefs.js:637
 msgid "Save"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:256
-#: yetanotherradio@io.github.buddysirjava/prefs.js:804
-#: yetanotherradio@io.github.buddysirjava/prefs.js:822
+#: yetanotherradio@io.github.buddysirjava/prefs.js:254
+#: yetanotherradio@io.github.buddysirjava/prefs.js:739
+#: yetanotherradio@io.github.buddysirjava/prefs.js:753
 msgid "Add Stations"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:268
+#: yetanotherradio@io.github.buddysirjava/prefs.js:266
 msgid "Search stations"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:269
+#: yetanotherradio@io.github.buddysirjava/prefs.js:267
 msgid "Search the Radio Browser network and save stations."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:274
+#: yetanotherradio@io.github.buddysirjava/prefs.js:272
 msgid "Search query"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:299
+#: yetanotherradio@io.github.buddysirjava/prefs.js:297
 msgid "Search"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:307
+#: yetanotherradio@io.github.buddysirjava/prefs.js:305
 msgid "Status"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:308
+#: yetanotherradio@io.github.buddysirjava/prefs.js:306
 msgid "Enter a query to start searching."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:319
+#: yetanotherradio@io.github.buddysirjava/prefs.js:317
 msgid "Search results"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:326
+#: yetanotherradio@io.github.buddysirjava/prefs.js:324
 msgid "Add station manually"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:327
+#: yetanotherradio@io.github.buddysirjava/prefs.js:325
 msgid "Enter a station name and URL to add it directly."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:343
+#: yetanotherradio@io.github.buddysirjava/prefs.js:341
 msgid "Add Station"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:416
+#: yetanotherradio@io.github.buddysirjava/prefs.js:414
 msgid "Please enter a search term."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:422
+#: yetanotherradio@io.github.buddysirjava/prefs.js:420
 msgid "Searching..."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:429
-#: yetanotherradio@io.github.buddysirjava/prefs.js:472
+#: yetanotherradio@io.github.buddysirjava/prefs.js:427
+#: yetanotherradio@io.github.buddysirjava/prefs.js:470
 msgid "No stations found."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:434
+#: yetanotherradio@io.github.buddysirjava/prefs.js:432
 msgid "Select a station to save it."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:437
+#: yetanotherradio@io.github.buddysirjava/prefs.js:435
 msgid "Failed to fetch stations."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:438
-#: yetanotherradio@io.github.buddysirjava/prefs.js:566
+#: yetanotherradio@io.github.buddysirjava/prefs.js:436
+#: yetanotherradio@io.github.buddysirjava/prefs.js:564
 #, javascript-format
 msgid "Error: %s"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:460
+#: yetanotherradio@io.github.buddysirjava/prefs.js:458
 msgid "Add to saved stations"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:496
+#: yetanotherradio@io.github.buddysirjava/prefs.js:494
 msgid "Selected station does not have a stream URL."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:501
+#: yetanotherradio@io.github.buddysirjava/prefs.js:499
 msgid "Station already saved."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:507
-#: yetanotherradio@io.github.buddysirjava/prefs.js:559
+#: yetanotherradio@io.github.buddysirjava/prefs.js:505
+#: yetanotherradio@io.github.buddysirjava/prefs.js:557
 #, javascript-format
 msgid "Saved \"%s\"."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:507
+#: yetanotherradio@io.github.buddysirjava/prefs.js:505
 msgid "station"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:526
+#: yetanotherradio@io.github.buddysirjava/prefs.js:524
 msgid "Please enter a station name."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:531
+#: yetanotherradio@io.github.buddysirjava/prefs.js:529
 msgid "Please enter a stream URL."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:536
+#: yetanotherradio@io.github.buddysirjava/prefs.js:534
 msgid "Please enter a valid URL."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:550
+#: yetanotherradio@io.github.buddysirjava/prefs.js:548
 msgid "A station with this URL is already saved."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:565
+#: yetanotherradio@io.github.buddysirjava/prefs.js:563
 msgid "Failed to save station."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:575
-#: yetanotherradio@io.github.buddysirjava/prefs.js:802
-#: yetanotherradio@io.github.buddysirjava/prefs.js:815
-msgid "General"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/prefs.js:584
-msgid "General Settings"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/prefs.js:585
-msgid "Configure general extension behavior."
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/prefs.js:590
-msgid "Enable Media Keys"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/prefs.js:591
-msgid "Use keyboard media keys (Play/Pause, Stop) to control playback"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/prefs.js:606
-msgid "Show Metadata"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/prefs.js:607
-msgid "Display track information (title, artist, album art) in the menu"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/prefs.js:622
-msgid "Auto-play Last Station"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/prefs.js:623
-msgid "Automatically play the last played station when extension is enabled"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/prefs.js:638
+#: yetanotherradio@io.github.buddysirjava/prefs.js:573
+#: yetanotherradio@io.github.buddysirjava/prefs.js:580
+#: yetanotherradio@io.github.buddysirjava/prefs.js:740
+#: yetanotherradio@io.github.buddysirjava/prefs.js:756
 msgid "Import / Export"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:639
+#: yetanotherradio@io.github.buddysirjava/prefs.js:581
 msgid "Backup or restore your station list."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:644
-#: yetanotherradio@io.github.buddysirjava/prefs.js:693
+#: yetanotherradio@io.github.buddysirjava/prefs.js:586
+#: yetanotherradio@io.github.buddysirjava/prefs.js:594
+#: yetanotherradio@io.github.buddysirjava/prefs.js:635
 msgid "Export Stations"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:645
-msgid "Export your saved stations to a file"
+#: yetanotherradio@io.github.buddysirjava/prefs.js:587
+msgid "Export your saved stations to a file."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:659
-#: yetanotherradio@io.github.buddysirjava/prefs.js:733
+#: yetanotherradio@io.github.buddysirjava/prefs.js:602
+#: yetanotherradio@io.github.buddysirjava/prefs.js:610
+#: yetanotherradio@io.github.buddysirjava/prefs.js:675
 msgid "Import Stations"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:660
-msgid "Import stations from a backup file"
+#: yetanotherradio@io.github.buddysirjava/prefs.js:603
+msgid "Import stations from a backup file."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:711
-msgid "Stations exported successfully"
+#: yetanotherradio@io.github.buddysirjava/prefs.js:653
+msgid "Stations exported successfully."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:714
-#: yetanotherradio@io.github.buddysirjava/prefs.js:727
-msgid "Failed to export stations"
+#: yetanotherradio@io.github.buddysirjava/prefs.js:656
+#: yetanotherradio@io.github.buddysirjava/prefs.js:669
+msgid "Failed to export stations."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:735
+#: yetanotherradio@io.github.buddysirjava/prefs.js:677
 msgid "Import"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:748
-msgid "Invalid file format"
+#: yetanotherradio@io.github.buddysirjava/prefs.js:690
+msgid "Invalid file format."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:756
-msgid "No new stations to import"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/prefs.js:762
+#: yetanotherradio@io.github.buddysirjava/prefs.js:699
 #, javascript-format
-msgid "Imported %d station(s)"
+msgid "Imported %d station(s)."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/prefs.js:768
+#: yetanotherradio@io.github.buddysirjava/prefs.js:705
 msgid "Failed to import stations. Invalid file format."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:29
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:26
 msgid "Could not create storage directory. Check file permissions."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:80
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:77
 msgid "Permission denied. Cannot save stations file."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:82
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:79
 #, javascript-format
 msgid "Failed to save stations: %s"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:82
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:79
 msgid "Unknown error"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:87
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:84
 msgid "Unnamed station"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:145
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:182
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:142
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:179
 msgid "Network request timed out. Please check your internet connection."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:147
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:144
 msgid "All radio servers failed to respond. Please try again later."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:149
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:146
 msgid "All radio servers failed to respond."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:163
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:160
 msgid "Radio Browser server list is empty."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:193
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:190
 msgid "Resource not found. The server may be unavailable."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:195
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:192
 msgid "Server error. Please try again later."
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:197
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:194
 #, javascript-format
-msgid "Request failed with status %s"
+msgid "Request failed with status %d"
 msgstr ""
 
-#: yetanotherradio@io.github.buddysirjava/radioUtils.js:204
+#: yetanotherradio@io.github.buddysirjava/radioUtils.js:201
 msgid "Invalid response from server."
 msgstr ""
 
@@ -457,21 +418,4 @@ msgstr ""
 #: yetanotherradio@io.github.buddysirjava/schemas/org.gnome.shell.extensions.yetanotherradio.gschema.xml:34
 msgid ""
 "Automatically play the last played station when the extension is enabled"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/schemas/org.gnome.shell.extensions.yetanotherradio.gschema.xml:39
-msgid "Enable media keys"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/schemas/org.gnome.shell.extensions.yetanotherradio.gschema.xml:40
-msgid ""
-"Enable global keyboard media keys (Play/Pause, Stop) to control playback"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/schemas/org.gnome.shell.extensions.yetanotherradio.gschema.xml:45
-msgid "Volume"
-msgstr ""
-
-#: yetanotherradio@io.github.buddysirjava/schemas/org.gnome.shell.extensions.yetanotherradio.gschema.xml:46
-msgid "Playback volume (0-100)"
 msgstr ""
