@@ -63,18 +63,15 @@ preferencespage preferencesgroup actionrow:hover {
 }
 
 .yetanotherradio-menu .popup-menu-item StLabel {
-    max-width: 350px;
-    ellipsize: end;
+    /* Width handled by JS */
 }
 
 .yetanotherradio-menu .metadata-title {
-    max-width: 280px;
-    ellipsize: end;
+    /* Width handled by JS */
 }
 
 .yetanotherradio-menu .metadata-artist {
-    max-width: 280px;
-    ellipsize: end;
+    /* Width handled by JS */
 }
 
 .yetanotherradio-menu .metadata-item-box {

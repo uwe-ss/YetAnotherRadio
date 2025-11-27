@@ -7,6 +7,7 @@ xgettext --from-code=UTF-8 \
   --package-name="Yet Another Radio" \
   --output=po/yetanotherradio.pot \
   yetanotherradio@io.github.buddysirjava/*.js \
+  yetanotherradio@io.github.buddysirjava/modules/*.js \
   yetanotherradio@io.github.buddysirjava/schemas/*.xml
 
 

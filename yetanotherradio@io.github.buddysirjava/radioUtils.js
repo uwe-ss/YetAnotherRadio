@@ -69,11 +69,9 @@ export function saveStations(stations) {
         const sanitized = stations
             .filter(station => station?.uuid && station?.url)
             .map(_sanitizeStation);
-        const sorted = sanitized.sort((a, b) =>
-            stationDisplayName(a).localeCompare(stationDisplayName(b), undefined, { sensitivity: 'base' }));
-        const json = JSON.stringify(sorted, null, 2);
+        const json = JSON.stringify(sanitized, null, 2);
         GLib.file_set_contents(STORAGE_PATH, json);
-        return sorted;
+        return sanitized;
     } catch (error) {
         console.error('Failed to save stations', error);
         if (error.code === GLib.IOErrorEnum.PERMISSION_DENIED) {
@@ -129,8 +127,8 @@ export class RadioBrowserClient {
                         await new Promise(resolve => {
                             this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
                                 this._timeoutId = null;
-                            resolve();
-                            return false;
+                                resolve();
+                                return false;
                             });
                         });
                     } else {

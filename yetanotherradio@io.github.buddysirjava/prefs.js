@@ -1,5 +1,6 @@
 import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
+import Gdk from 'gi://Gdk';
 import GObject from 'gi://GObject';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
@@ -25,7 +26,13 @@ const SavedStationsPage = GObject.registerClass(
                 description: _('These stations appear in the panel indicator menu.'),
             });
             this.add(this._savedGroup);
-            this._savedRows = [];
+
+            this._stationsList = new Gtk.ListBox({
+                selection_mode: Gtk.SelectionMode.NONE,
+                css_classes: ['boxed-list'],
+            });
+            this._savedGroup.add(this._stationsList);
+
             this._refreshSavedGroup();
         }
 
@@ -35,8 +42,12 @@ const SavedStationsPage = GObject.registerClass(
         }
 
         _refreshSavedGroup() {
-            this._savedRows.forEach(row => this._savedGroup.remove(row));
-            this._savedRows = [];
+            let child = this._stationsList.get_first_child();
+            while (child) {
+                const next = child.get_next_sibling();
+                this._stationsList.remove(child);
+                child = next;
+            }
 
             if (!this._stations.length) {
                 const row = new Adw.ActionRow({
@@ -44,16 +55,45 @@ const SavedStationsPage = GObject.registerClass(
                     subtitle: _('Use the Add Stations tab to add some.'),
                 });
                 row.set_sensitive(false);
-                this._savedGroup.add(row);
-                this._savedRows.push(row);
+                this._stationsList.append(row);
                 return;
             }
 
             this._stations.forEach((station, index) => {
+                const displayName = stationDisplayName(station);
+                const truncatedName = displayName.length > 30 ? displayName.substring(0, 30) + '...' : displayName;
                 const row = new Adw.ActionRow({
-                    title: stationDisplayName(station),
-                    subtitle: station.url || '',
+                    title: truncatedName,
+                    subtitle: station.url ? (station.url.length > 30 ? station.url.substring(0, 30) + '...' : station.url) : '',
                 });
+
+                const dragHandle = new Gtk.Image({
+                    icon_name: 'list-drag-handle-symbolic',
+                    css_classes: ['dim-label'],
+                });
+                row.add_prefix(dragHandle);
+
+                const dragSource = new Gtk.DragSource({ actions: Gdk.DragAction.MOVE });
+                dragSource.connect('prepare', (source, x, y) => {
+                    const value = new GObject.Value();
+                    value.init(GObject.TYPE_STRING);
+                    value.set_string(station.uuid);
+                    return Gdk.ContentProvider.new_for_value(value);
+                });
+                dragSource.connect('drag-begin', () => {
+                    row.set_opacity(0.5);
+                });
+                dragSource.connect('drag-end', () => {
+                    row.set_opacity(1.0);
+                });
+
+                row.add_controller(dragSource);
+
+                const dropTarget = Gtk.DropTarget.new(GObject.TYPE_STRING, Gdk.DragAction.MOVE);
+                dropTarget.connect('drop', (target, value, x, y) => {
+                    return this._onDrop(value, station.uuid);
+                });
+                row.add_controller(dropTarget);
 
                 const buttonBox = new Gtk.Box({
                     orientation: Gtk.Orientation.HORIZONTAL,
@@ -67,26 +107,6 @@ const SavedStationsPage = GObject.registerClass(
                 });
                 editButton.connect('clicked', () => this._editStation(station));
                 buttonBox.append(editButton);
-
-                if (index > 0) {
-                    const upButton = new Gtk.Button({
-                        icon_name: 'go-up-symbolic',
-                        tooltip_text: _('Move up'),
-                        has_frame: false,
-                    });
-                    upButton.connect('clicked', () => this._moveStation(index, -1));
-                    buttonBox.append(upButton);
-                }
-
-                if (index < this._stations.length - 1) {
-                    const downButton = new Gtk.Button({
-                        icon_name: 'go-down-symbolic',
-                        tooltip_text: _('Move down'),
-                        has_frame: false,
-                    });
-                    downButton.connect('clicked', () => this._moveStation(index, 1));
-                    buttonBox.append(downButton);
-                }
 
                 const favoriteButton = new Gtk.Button({
                     icon_name: station.favorite ? 'starred-symbolic' : 'non-starred-symbolic',
@@ -108,9 +128,28 @@ const SavedStationsPage = GObject.registerClass(
                 row.set_activatable(false);
                 row.set_sensitive(true);
 
-                this._savedGroup.add(row);
-                this._savedRows.push(row);
+                this._stationsList.append(row);
             });
+        }
+
+        _onDrop(sourceUuid, targetUuid) {
+            if (sourceUuid === targetUuid) return false;
+
+            const sourceIndex = this._stations.findIndex(s => s.uuid === sourceUuid);
+            const targetIndex = this._stations.findIndex(s => s.uuid === targetUuid);
+
+            if (sourceIndex < 0 || targetIndex < 0) return false;
+
+            const station = this._stations[sourceIndex];
+            this._stations.splice(sourceIndex, 1);
+            this._stations.splice(targetIndex, 0, station);
+
+            this._stations = saveStations(this._stations);
+            this._refreshSavedGroup();
+            if (this._refreshCallback) {
+                this._refreshCallback(this._stations);
+            }
+            return true;
         }
 
         _removeStation(uuid) {
@@ -212,20 +251,6 @@ const SavedStationsPage = GObject.registerClass(
                 dialog.set_transient_for(window);
             }
             dialog.present();
-        }
-
-        _moveStation(index, direction) {
-            if (index + direction < 0 || index + direction >= this._stations.length)
-                return;
-
-            const station = this._stations[index];
-            this._stations.splice(index, 1);
-            this._stations.splice(index + direction, 0, station);
-            this._stations = saveStations(this._stations);
-            this._refreshSavedGroup();
-            if (this._refreshCallback) {
-                this._refreshCallback(this._stations);
-            }
         }
 
         _toggleFavorite(uuid) {
@@ -368,7 +393,6 @@ const AddStationsPage = GObject.registerClass(
                 this._client.destroy();
                 this._client = null;
             }
-            super.destroy();
         }
 
         _cancelSearchDebounce() {
@@ -594,7 +618,7 @@ const GeneralSettingsPage = GObject.registerClass(
 
             const mediaKeysSwitch = new Gtk.Switch({
                 active: this._settings.get_boolean('enable-media-keys'),
-                valign: 3, // Gtk.Align.CENTER
+                valign: 3,
             });
             mediaKeysSwitch.connect('notify::active', (sw) => {
                 this._settings.set_boolean('enable-media-keys', sw.active);
@@ -610,7 +634,7 @@ const GeneralSettingsPage = GObject.registerClass(
 
             const showMetadataSwitch = new Gtk.Switch({
                 active: this._settings.get_boolean('show-metadata'),
-                valign: 3, // Gtk.Align.CENTER
+                valign: 3,
             });
             showMetadataSwitch.connect('notify::active', (sw) => {
                 this._settings.set_boolean('show-metadata', sw.active);
@@ -626,7 +650,7 @@ const GeneralSettingsPage = GObject.registerClass(
 
             const autoPlaySwitch = new Gtk.Switch({
                 active: this._settings.get_boolean('auto-play-last-station'),
-                valign: 3, // Gtk.Align.CENTER
+                valign: 3,
             });
             autoPlaySwitch.connect('notify::active', (sw) => {
                 this._settings.set_boolean('auto-play-last-station', sw.active);
