@@ -269,7 +269,7 @@ msgstr ""
 
 #: yetanotherradio@io.github.buddysirjava/prefs.js:662
 msgid "Import / Export"
-msgstr "Importieren/Exportieren"
+msgstr "Importieren/exportieren"
 
 #: yetanotherradio@io.github.buddysirjava/prefs.js:663
 msgid "Backup or restore your station list."
