@@ -2,15 +2,20 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
 import Gst from 'gi://Gst';
+import GstAudio from 'gi://GstAudio';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
+import Clutter from 'gi://Clutter';
 
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as Slider from 'resource:///org/gnome/shell/ui/slider.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
 
-import { ensureStorageFile, loadStations, saveStations, stationDisplayName, STORAGE_PATH } from './radioUtils.js';
+import { ensureStorageFile, loadStations, saveStations, stationDisplayName, STORAGE_PATH, initTranslations } from './radioUtils.js';
+
+initTranslations(_);
 
 const METADATA_ICON_SIZE = 64;
 
@@ -33,6 +38,7 @@ const Indicator = GObject.registerClass(
             };
             this._bus = null;
             this._busHandlerId = null;
+            this._pausedAt = null;
 
             const iconPath = `${extensionPath}/icons/yetanotherradio.svg`;
             const iconFile = Gio.File.new_for_path(iconPath);
@@ -49,6 +55,10 @@ const Indicator = GObject.registerClass(
             this._metadataItem.visible = false;
             this.menu.addMenuItem(this._metadataItem);
 
+            this._volumeItem = this._createVolumeItem();
+            this._volumeItem.visible = false;
+            this.menu.addMenuItem(this._volumeItem);
+
             this._playbackControlItem = new PopupMenu.PopupMenuItem(_('Pause'));
             this._playbackControlItem.connect('activate', () => this._togglePlayback());
             this._playbackControlItem.visible = false;
@@ -60,10 +70,15 @@ const Indicator = GObject.registerClass(
             this._favoritesSection.visible = false;
             this.menu.addMenuItem(this._favoritesSection);
 
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            this._favSeparator = new PopupMenu.PopupSeparatorMenuItem();
+            this.menu.addMenuItem(this._favSeparator);
 
             this._stationSection = new PopupMenu.PopupMenuSection();
             this.menu.addMenuItem(this._stationSection);
+
+            this._scrollableSection = this._createScrollableSection();
+            this._scrollableSection.visible = false;
+            this.menu.addMenuItem(this._scrollableSection);
 
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
@@ -133,6 +148,86 @@ const Indicator = GObject.registerClass(
             return item;
         }
 
+        _createScrollableSection() {
+            if (PopupMenu.PopupMenuScrollSection) {
+                const section = new PopupMenu.PopupMenuScrollSection();
+                section.actor.add_style_class_name('yetanotherradio-scroll-view');
+                return section;
+            }
+
+            const scrollView = new St.ScrollView({
+                style_class: 'yetanotherradio-scroll-view',
+                hscrollbar_policy: St.PolicyType.NEVER,
+                vscrollbar_policy: St.PolicyType.AUTOMATIC
+            });
+
+            const box = new St.BoxLayout({
+                vertical: true
+            });
+            scrollView.add_child(box);
+
+            const item = new PopupMenu.PopupBaseMenuItem({
+                reactive: false,
+                can_focus: false
+            });
+            item.actor.add_child(scrollView);
+            
+            // Allow the scrollview to take up space
+            scrollView.x_expand = true;
+            scrollView.y_expand = true;
+            
+            item._box = box;
+            return item;
+        }
+
+        _createVolumeItem() {
+            const item = new PopupMenu.PopupBaseMenuItem({
+                activate: false,
+            });
+
+            this._volumeIcon = new St.Icon({
+                icon_name: 'audio-volume-high-symbolic',
+                style_class: 'popup-menu-icon',
+            });
+            item.add_child(this._volumeIcon);
+
+            const volume = this._settings.get_int('volume') / 100.0;
+            this._volumeSlider = new Slider.Slider(volume);
+            this._volumeSlider.connect('notify::value', () => this._onVolumeChanged());
+            
+            // Add slider with expand to fill the width
+            item.add_child(this._volumeSlider);
+            this._volumeSlider.x_expand = true;
+            this._volumeSlider.y_align = Clutter.ActorAlign.CENTER;
+
+            return item;
+        }
+
+        _onVolumeChanged() {
+            const volume = this._volumeSlider.value;
+            
+            // Update player volume
+            if (this._player) {
+                this._player.set_volume(GstAudio.StreamVolumeFormat.CUBIC, volume);
+            }
+
+            // Update icon
+            let iconName;
+            if (volume <= 0) {
+                iconName = 'audio-volume-muted-symbolic';
+            } else if (volume < 0.33) {
+                iconName = 'audio-volume-low-symbolic';
+            } else if (volume < 0.66) {
+                iconName = 'audio-volume-medium-symbolic';
+            } else {
+                iconName = 'audio-volume-high-symbolic';
+            }
+            this._volumeIcon.icon_name = iconName;
+
+            // Save setting (debounced would be better, but simple for now)
+            this._settings.set_int('volume', Math.round(volume * 100));
+        }
+
         _updateMetadataDisplay() {
             const showMetadata = this._settings?.get_boolean('show-metadata') ?? true;
             if (!showMetadata || !this._metadataItem.visible || !this._player)
@@ -181,6 +276,7 @@ const Indicator = GObject.registerClass(
                     this._metadataItem._thumbnail.icon_size = METADATA_ICON_SIZE;
                     thumbnailSet = true;
                 } catch (e) {
+                    console.debug(e);
                 }
             }
 
@@ -192,6 +288,7 @@ const Indicator = GObject.registerClass(
                     this._metadataItem._thumbnail.icon_size = METADATA_ICON_SIZE;
                     thumbnailSet = true;
                 } catch (e) {
+                    console.debug(e);
                 }
             }
 
@@ -238,6 +335,7 @@ const Indicator = GObject.registerClass(
                     if (metadata.bitrate) this._currentMetadata.bitrate = metadata.bitrate;
                 }
             } catch (e) {
+                console.debug(e);
             }
         }
 
@@ -255,6 +353,7 @@ const Indicator = GObject.registerClass(
                 });
                 item.insert_child_at_index(iconWidget, 0);
             } catch (e) {
+                console.debug(e);
             }
         }
 
@@ -266,12 +365,24 @@ const Indicator = GObject.registerClass(
         _refreshStationsMenu() {
             this._favoritesSection.removeAll();
             this._stationSection.removeAll();
+            
+            if (this._scrollableSection.removeAll) {
+                this._scrollableSection.removeAll();
+            } else if (this._scrollableSection._box) {
+                this._scrollableSection._box.destroy_all_children();
+            }
 
             if (!this._stations.length) {
                 const emptyItem = new PopupMenu.PopupMenuItem(_('No saved stations yet. Use preferences to add some.'));
                 emptyItem.reactive = false;
                 emptyItem.sensitive = false;
                 this._stationSection.addMenuItem(emptyItem);
+                
+                this._favoritesSection.visible = false;
+                this._favSeparator.visible = false;
+                this._stationSection.visible = true;
+                this._scrollableSection.visible = false;
+                
                 this._hintItem.visible = true;
                 return;
             }
@@ -283,20 +394,56 @@ const Indicator = GObject.registerClass(
             );
             const regular = this._stations.filter(s => !s.favorite);
 
-            if (favorites.length > 0) {
-                favorites.forEach(station => {
-                    const item = this._createStationMenuItem(station);
-                    this._favoritesSection.addMenuItem(item);
-                });
-                this._favoritesSection.visible = true;
-            } else {
+            if (this._stations.length > 6) {
                 this._favoritesSection.visible = false;
-            }
+                this._favSeparator.visible = false;
+                this._stationSection.visible = false;
+                this._scrollableSection.visible = true;
 
-            regular.forEach(station => {
-                const item = this._createStationMenuItem(station);
-                this._stationSection.addMenuItem(item);
-            });
+                const addStation = (station) => {
+                    const item = this._createStationMenuItem(station);
+                    if (this._scrollableSection.addMenuItem) {
+                        this._scrollableSection.addMenuItem(item);
+                    } else {
+                        this._scrollableSection._box.add_child(item.actor);
+                    }
+                };
+
+                if (favorites.length > 0) {
+                    favorites.forEach(addStation);
+                    
+                    if (regular.length > 0) {
+                        if (this._scrollableSection.addMenuItem) {
+                            this._scrollableSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+                        } else {
+                            const sep = new PopupMenu.PopupSeparatorMenuItem();
+                            this._scrollableSection._box.add_child(sep.actor);
+                        }
+                    }
+                }
+                
+                regular.forEach(addStation);
+            } else {
+                this._scrollableSection.visible = false;
+                this._stationSection.visible = true;
+
+                if (favorites.length > 0) {
+                    favorites.forEach(station => {
+                        const item = this._createStationMenuItem(station);
+                        this._favoritesSection.addMenuItem(item);
+                    });
+                    this._favoritesSection.visible = true;
+                    this._favSeparator.visible = regular.length > 0;
+                } else {
+                    this._favoritesSection.visible = false;
+                    this._favSeparator.visible = false;
+                }
+
+                regular.forEach(station => {
+                    const item = this._createStationMenuItem(station);
+                    this._stationSection.addMenuItem(item);
+                });
+            }
         }
 
         _createStationMenuItem(station) {
@@ -326,6 +473,10 @@ const Indicator = GObject.registerClass(
                 return;
 
             this._player = Gst.ElementFactory.make('playbin', 'radio-player');
+            
+            // Set initial volume
+            const volume = this._settings.get_int('volume') / 100.0;
+            this._player.set_volume(GstAudio.StreamVolumeFormat.CUBIC, volume);
 
             const fakeVideoSink = Gst.ElementFactory.make('fakesink', 'fake-video-sink');
             this._player.set_property('video-sink', fakeVideoSink);
@@ -337,19 +488,38 @@ const Indicator = GObject.registerClass(
                     this._handleTagMessage(message);
                 } else if (message.type === Gst.MessageType.ERROR) {
                     const [error, debug] = message.parse_error();
-                    logError(error, debug);
+                    console.error(error, debug);
                     let errorBody = _('Could not play the selected station.');
+                    let errorMessage = '';
                     if (error) {
                         if (error.message && typeof error.message === 'string') {
-                            errorBody = String(error.message);
+                            errorMessage = String(error.message);
+                            errorBody = errorMessage;
                         } else if (debug && typeof debug === 'string') {
-                            errorBody = String(debug);
+                            errorMessage = String(debug);
+                            errorBody = errorMessage;
                         } else if (typeof error === 'string') {
-                            errorBody = String(error);
+                            errorMessage = String(error);
+                            errorBody = errorMessage;
                         }
                     }
-                    Main.notifyError(_('Playback error'), errorBody);
-                    this._stopPlayback();
+                    
+                    // If we get a "seeking" error and we have a station playing, reconnect to stream
+                    if (errorMessage && 
+                        (errorMessage.includes('seeking') || errorMessage.includes('seek')) &&
+                        this._nowPlaying && 
+                        this._playbackState === 'playing') {
+                        console.log('Seeking error detected, reconnecting to stream...');
+                        const station = this._nowPlaying;
+                        // Small delay to ensure player state is cleaned up
+                        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+                            this._playStation(station);
+                            return false;
+                        });
+                    } else {
+                        Main.notifyError(_('Playback error'), errorBody);
+                        this._stopPlayback();
+                    }
                 } else if (message.type === Gst.MessageType.EOS) {
                     this._stopPlayback();
                 }
@@ -400,6 +570,11 @@ const Indicator = GObject.registerClass(
 
                 this._player.set_state(Gst.State.NULL);
                 this._player.set_property('uri', station.url);
+                
+                // Ensure volume is set correctly when starting playback
+                const vol = (this._settings.get_int('volume') || 100) / 100;
+                this._player.set_volume(GstAudio.StreamVolumeFormat.CUBIC, vol);
+                
                 this._player.set_state(Gst.State.PLAYING);
 
                 station.lastPlayed = Date.now();
@@ -409,6 +584,7 @@ const Indicator = GObject.registerClass(
                 this._playbackState = 'playing';
                 this._updatePlaybackControl();
                 this._playbackControlItem.visible = true;
+                this._volumeItem.visible = true;
                 const showMetadata = this._settings?.get_boolean('show-metadata') ?? true;
                 this._metadataItem.visible = showMetadata;
                 if (showMetadata) {
@@ -416,7 +592,7 @@ const Indicator = GObject.registerClass(
                 }
                 Main.notify(_('Playing %s').format(stationDisplayName(station)));
             } catch (error) {
-                logError(error, 'Failed to start playback');
+                console.error(error, 'Failed to start playback');
                 const errorBody = (error && typeof error === 'object' && error.message) 
                     ? String(error.message) 
                     : _('Could not start the selected station.');
@@ -448,11 +624,38 @@ const Indicator = GObject.registerClass(
             if (this._playbackState === 'playing') {
                 this._player.set_state(Gst.State.PAUSED);
                 this._playbackState = 'paused';
+                this._pausedAt = Date.now();
                 this._updatePlaybackControl();
             } else if (this._playbackState === 'paused') {
-                this._player.set_state(Gst.State.PLAYING);
-                this._playbackState = 'playing';
-                this._updatePlaybackControl();
+                // For live streams, if paused for more than 5 seconds, reconnect to stream
+                // This prevents "Server does not support seeking" errors
+                const pauseDuration = this._pausedAt ? Date.now() - this._pausedAt : 0;
+                const RECONNECT_THRESHOLD = 5000; // 5 seconds in milliseconds
+                
+                if (pauseDuration > RECONNECT_THRESHOLD && this._nowPlaying) {
+                    // Reconnect to the stream to get current position
+                    const station = this._nowPlaying;
+                    this._playStation(station);
+                } else {
+                    // Short pause, try to resume normally
+                    this._player.set_state(Gst.State.PLAYING);
+                    this._playbackState = 'playing';
+                    this._updatePlaybackControl();
+                }
+                this._pausedAt = null;
+            }
+        }
+
+        // Public methods for media key handlers
+        handleMediaPlayPause() {
+            if (this._playbackState === 'playing' || this._playbackState === 'paused') {
+                this._togglePlayback();
+            }
+        }
+
+        handleMediaStop() {
+            if (this._playbackState === 'playing' || this._playbackState === 'paused') {
+                this._stopPlayback();
             }
         }
 
@@ -463,7 +666,9 @@ const Indicator = GObject.registerClass(
             this._player.set_state(Gst.State.NULL);
             this._nowPlaying = null;
             this._playbackState = 'stopped';
+            this._pausedAt = null;
             this._playbackControlItem.visible = false;
+            this._volumeItem.visible = false;
             this._metadataItem.visible = false;
             this._stopMetadataUpdate();
             this._currentMetadata = {
@@ -494,6 +699,7 @@ const Indicator = GObject.registerClass(
                 try {
                     this._player.set_state(Gst.State.NULL);
                 } catch (e) {
+                    console.debug(e);
                 }
                 this._player = null;
             }
@@ -513,6 +719,9 @@ export default class YetAnotherRadioExtension extends Extension {
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
         this._monitor = this._watchStationsFile();
+
+        // Setup media keys
+        this._setupMediaKeys();
     }
 
     _watchStationsFile() {
@@ -524,6 +733,79 @@ export default class YetAnotherRadioExtension extends Extension {
         return monitor;
     }
 
+    _setupMediaKeys() {
+        const enableMediaKeys = this._settings?.get_boolean('enable-media-keys') ?? true;
+        if (!enableMediaKeys) {
+            return;
+        }
+
+        const display = global.display;
+        this._mediaKeyAccelerators = [];
+
+        // XF86AudioPlay - Play/Pause toggle
+        const playPauseId = display.grab_accelerator('XF86AudioPlay', Meta.KeyBindingFlags.NONE);
+        if (playPauseId > 0) {
+            this._mediaKeyAccelerators.push({
+                id: playPauseId,
+                action: 'play-pause'
+            });
+        }
+
+        // XF86AudioStop - Stop playback
+        const stopId = display.grab_accelerator('XF86AudioStop', Meta.KeyBindingFlags.NONE);
+        if (stopId > 0) {
+            this._mediaKeyAccelerators.push({
+                id: stopId,
+                action: 'stop'
+            });
+        }
+
+        // Connect to accelerator activated signal
+        this._acceleratorHandlerId = global.display.connect('accelerator-activated', (display, action, deviceId, timestamp) => {
+            const accelerator = this._mediaKeyAccelerators.find(acc => acc.id === action);
+            if (!accelerator || !this._indicator) {
+                return;
+            }
+
+            if (accelerator.action === 'play-pause') {
+                this._indicator.handleMediaPlayPause();
+            } else if (accelerator.action === 'stop') {
+                this._indicator.handleMediaStop();
+            }
+        });
+
+        // Listen for settings changes
+        this._mediaKeysSettingsHandlerId = this._settings?.connect('changed::enable-media-keys', () => {
+            this._cleanupMediaKeys();
+            this._setupMediaKeys();
+        });
+    }
+
+    _cleanupMediaKeys() {
+        if (this._acceleratorHandlerId) {
+            global.display.disconnect(this._acceleratorHandlerId);
+            this._acceleratorHandlerId = null;
+        }
+
+        if (this._mediaKeyAccelerators) {
+            const display = global.display;
+            this._mediaKeyAccelerators.forEach(acc => {
+                try {
+                    display.ungrab_accelerator(acc.id);
+                } catch (e) {
+                    // Ignore errors when ungrabing
+                    console.debug(e);
+                }
+            });
+            this._mediaKeyAccelerators = [];
+        }
+
+        if (this._mediaKeysSettingsHandlerId) {
+            this._settings?.disconnect(this._mediaKeysSettingsHandlerId);
+            this._mediaKeysSettingsHandlerId = null;
+        }
+    }
+
     disable() {
         if (this._monitor) {
             if (this._monitorHandlerId) {
@@ -533,6 +815,8 @@ export default class YetAnotherRadioExtension extends Extension {
             this._monitor.cancel();
             this._monitor = null;
         }
+
+        this._cleanupMediaKeys();
 
         this._indicator?.destroy();
         this._indicator = null;

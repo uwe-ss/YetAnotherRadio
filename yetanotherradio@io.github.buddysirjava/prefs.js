@@ -6,7 +6,9 @@ import Gio from 'gi://Gio';
 
 import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-import { loadStations, saveStations, stationDisplayName, RadioBrowserClient } from './radioUtils.js';
+import { loadStations, saveStations, stationDisplayName, RadioBrowserClient, initTranslations } from './radioUtils.js';
+
+initTranslations(_);
 
 const SavedStationsPage = GObject.registerClass(
     class SavedStationsPage extends Adw.PreferencesPage {
@@ -566,65 +568,121 @@ const AddStationsPage = GObject.registerClass(
         }
     });
 
-const ImportExportPage = GObject.registerClass(
-    class ImportExportPage extends Adw.PreferencesPage {
-        _init(stations, refreshCallback) {
+const GeneralSettingsPage = GObject.registerClass(
+    class GeneralSettingsPage extends Adw.PreferencesPage {
+        _init(settings, stations, refreshCallback, toastOverlay) {
             super._init({
-                title: _('Import / Export'),
+                title: _('General'),
             });
 
+            this._settings = settings;
             this._stations = stations;
             this._refreshCallback = refreshCallback;
+            this._toastOverlay = toastOverlay;
 
-            this._importExportGroup = new Adw.PreferencesGroup({
+            const generalGroup = new Adw.PreferencesGroup({
+                title: _('General Settings'),
+                description: _('Configure general extension behavior.'),
+            });
+            this.add(generalGroup);
+
+            const mediaKeysRow = new Adw.ActionRow({
+                title: _('Enable Media Keys'),
+                subtitle: _('Use keyboard media keys (Play/Pause, Stop) to control playback'),
+            });
+            mediaKeysRow.set_activatable(false);
+
+            const mediaKeysSwitch = new Gtk.Switch({
+                active: this._settings.get_boolean('enable-media-keys'),
+                valign: 3, // Gtk.Align.CENTER
+            });
+            mediaKeysSwitch.connect('notify::active', (sw) => {
+                this._settings.set_boolean('enable-media-keys', sw.active);
+            });
+            mediaKeysRow.add_suffix(mediaKeysSwitch);
+            generalGroup.add(mediaKeysRow);
+
+            const showMetadataRow = new Adw.ActionRow({
+                title: _('Show Metadata'),
+                subtitle: _('Display track information (title, artist, album art) in the menu'),
+            });
+            showMetadataRow.set_activatable(false);
+
+            const showMetadataSwitch = new Gtk.Switch({
+                active: this._settings.get_boolean('show-metadata'),
+                valign: 3, // Gtk.Align.CENTER
+            });
+            showMetadataSwitch.connect('notify::active', (sw) => {
+                this._settings.set_boolean('show-metadata', sw.active);
+            });
+            showMetadataRow.add_suffix(showMetadataSwitch);
+            generalGroup.add(showMetadataRow);
+
+            const autoPlayRow = new Adw.ActionRow({
+                title: _('Auto-play Last Station'),
+                subtitle: _('Automatically play the last played station when extension is enabled'),
+            });
+            autoPlayRow.set_activatable(false);
+
+            const autoPlaySwitch = new Gtk.Switch({
+                active: this._settings.get_boolean('auto-play-last-station'),
+                valign: 3, // Gtk.Align.CENTER
+            });
+            autoPlaySwitch.connect('notify::active', (sw) => {
+                this._settings.set_boolean('auto-play-last-station', sw.active);
+            });
+            autoPlayRow.add_suffix(autoPlaySwitch);
+            generalGroup.add(autoPlayRow);
+
+            const importExportGroup = new Adw.PreferencesGroup({
                 title: _('Import / Export'),
                 description: _('Backup or restore your station list.'),
             });
-            this.add(this._importExportGroup);
+            this.add(importExportGroup);
 
             this._exportRow = new Adw.ActionRow({
                 title: _('Export Stations'),
-                subtitle: _('Export your saved stations to a file.'),
+                subtitle: _('Export your saved stations to a file'),
             });
-            this._exportRow.set_activatable(false);
+            this._exportRow.set_activatable(true);
             this._exportRow.set_sensitive(true);
+            this._exportRow.connect('activated', () => this._exportStations());
 
-            const exportButton = new Gtk.Button({
+            const exportIcon = new Gtk.Image({
                 icon_name: 'document-save-symbolic',
-                tooltip_text: _('Export Stations'),
-                has_frame: false,
+                icon_size: Gtk.IconSize.NORMAL,
             });
-            exportButton.connect('clicked', () => this._exportStations());
-            this._exportRow.add_suffix(exportButton);
-            this._importExportGroup.add(this._exportRow);
+            this._exportRow.add_suffix(exportIcon);
+            importExportGroup.add(this._exportRow);
 
             this._importRow = new Adw.ActionRow({
                 title: _('Import Stations'),
-                subtitle: _('Import stations from a backup file.'),
+                subtitle: _('Import stations from a backup file'),
             });
-            this._importRow.set_activatable(false);
+            this._importRow.set_activatable(true);
             this._importRow.set_sensitive(true);
+            this._importRow.connect('activated', () => this._importStations());
 
-            const importButton = new Gtk.Button({
+            const importIcon = new Gtk.Image({
                 icon_name: 'document-open-symbolic',
-                tooltip_text: _('Import Stations'),
-                has_frame: false,
+                icon_size: Gtk.IconSize.NORMAL,
             });
-            importButton.connect('clicked', () => this._importStations());
-            this._importRow.add_suffix(importButton);
-            this._importExportGroup.add(this._importRow);
+            this._importRow.add_suffix(importIcon);
+            importExportGroup.add(this._importRow);
         }
 
         setStations(stations) {
             this._stations = stations;
         }
 
-        _setExportStatus(text) {
-            this._exportRow.subtitle = text;
-        }
-
-        _setImportStatus(text) {
-            this._importRow.subtitle = text;
+        _showToast(title, timeout = 3) {
+            if (this._toastOverlay) {
+                const toast = new Adw.Toast({
+                    title: title,
+                    timeout: timeout,
+                });
+                this._toastOverlay.add_toast(toast);
+            }
         }
 
         _exportStations() {
@@ -650,10 +708,10 @@ const ImportExportPage = GObject.registerClass(
                                     Gio.FileCreateFlags.REPLACE_DESTINATION,
                                     null
                                 );
-                                this._setExportStatus(_('Stations exported successfully.'));
+                                this._showToast(_('Stations exported successfully'));
                             } catch (error) {
                                 console.error('Export failed', error);
-                                this._setExportStatus(_('Failed to export stations.'));
+                                this._showToast(_('Failed to export stations'));
                             }
                         }
                     }
@@ -666,7 +724,7 @@ const ImportExportPage = GObject.registerClass(
                 fileChooser.show();
             } catch (error) {
                 console.error('Export failed', error);
-                this._setExportStatus(_('Failed to export stations.'));
+                this._showToast(_('Failed to export stations'));
             }
         }
 
@@ -687,22 +745,27 @@ const ImportExportPage = GObject.registerClass(
                             const imported = JSON.parse(text);
 
                             if (!Array.isArray(imported)) {
-                                this._setImportStatus(_('Invalid file format.'));
+                                this._showToast(_('Invalid file format'));
                                 return;
                             }
 
                             const existingUuids = new Set(this._stations.map(s => s.uuid));
                             const newStations = imported.filter(s => !existingUuids.has(s.uuid));
 
+                            if (newStations.length === 0) {
+                                this._showToast(_('No new stations to import'));
+                                return;
+                            }
+
                             this._stations = [...this._stations, ...newStations];
                             this._stations = saveStations(this._stations);
-                            this._setImportStatus(_('Imported %d station(s).').format(newStations.length));
+                            this._showToast(_('Imported %d station(s)').format(newStations.length));
                             if (this._refreshCallback) {
                                 this._refreshCallback(this._stations);
                             }
                         } catch (error) {
                             console.error('Import failed', error);
-                            this._setImportStatus(_('Failed to import stations. Invalid file format.'));
+                            this._showToast(_('Failed to import stations. Invalid file format.'));
                         }
                     }
                 }
@@ -723,21 +786,24 @@ export default class YetAnotherRadioPreferences extends ExtensionPreferences {
         const settings = this.getSettings();
         const stations = loadStations();
 
+        const toastOverlay = new Adw.ToastOverlay();
         const viewStack = new Adw.ViewStack();
 
         const refreshCallback = (newStations) => {
             savedStationsPage.setStations(newStations);
             addStationsPage.setStations(newStations);
-            importExportPage.setStations(newStations);
+            generalSettingsPage.setStations(newStations);
         };
 
+        const generalSettingsPage = new GeneralSettingsPage(settings, stations, refreshCallback, toastOverlay);
         const savedStationsPage = new SavedStationsPage(stations, refreshCallback);
         const addStationsPage = new AddStationsPage(stations, refreshCallback, settings);
-        const importExportPage = new ImportExportPage(stations, refreshCallback);
 
+        viewStack.add_titled(generalSettingsPage, 'general', _('General'));
         viewStack.add_titled(savedStationsPage, 'saved', _('Saved Stations'));
         viewStack.add_titled(addStationsPage, 'add', _('Add Stations'));
-        viewStack.add_titled(importExportPage, 'import', _('Import / Export'));
+
+        toastOverlay.set_child(viewStack);
 
         const tabBox = new Gtk.Box({
             orientation: Gtk.Orientation.HORIZONTAL,
@@ -745,22 +811,31 @@ export default class YetAnotherRadioPreferences extends ExtensionPreferences {
             css_classes: ['linked'],
         });
 
+        const generalButton = new Gtk.ToggleButton({
+            label: _('General'),
+            active: true,
+        });
         const savedButton = new Gtk.ToggleButton({
             label: _('Saved Stations'),
-            active: true,
         });
         const addButton = new Gtk.ToggleButton({
             label: _('Add Stations'),
         });
-        const importButton = new Gtk.ToggleButton({
-            label: _('Import / Export'),
+
+        generalButton.connect('toggled', (btn) => {
+            if (btn.active) {
+                viewStack.set_visible_child_name('general');
+                savedButton.set_active(false);
+                addButton.set_active(false);
+            }
         });
+        tabBox.append(generalButton);
 
         savedButton.connect('toggled', (btn) => {
             if (btn.active) {
                 viewStack.set_visible_child_name('saved');
+                generalButton.set_active(false);
                 addButton.set_active(false);
-                importButton.set_active(false);
             }
         });
         tabBox.append(savedButton);
@@ -768,20 +843,11 @@ export default class YetAnotherRadioPreferences extends ExtensionPreferences {
         addButton.connect('toggled', (btn) => {
             if (btn.active) {
                 viewStack.set_visible_child_name('add');
+                generalButton.set_active(false);
                 savedButton.set_active(false);
-                importButton.set_active(false);
             }
         });
         tabBox.append(addButton);
-
-        importButton.connect('toggled', (btn) => {
-            if (btn.active) {
-                viewStack.set_visible_child_name('import');
-                savedButton.set_active(false);
-                addButton.set_active(false);
-            }
-        });
-        tabBox.append(importButton);
 
         const toolbarView = new Adw.ToolbarView();
 
@@ -789,7 +855,7 @@ export default class YetAnotherRadioPreferences extends ExtensionPreferences {
         headerBar.set_title_widget(tabBox);
         toolbarView.add_top_bar(headerBar);
 
-        toolbarView.set_content(viewStack);
+        toolbarView.set_content(toastOverlay);
 
         window.set_content(toolbarView);
 

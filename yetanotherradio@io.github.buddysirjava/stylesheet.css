@@ -80,3 +80,16 @@ preferencespage preferencesgroup actionrow:hover {
 .yetanotherradio-menu .metadata-item-box {
     max-width: 380px;
 }
+
+.yetanotherradio-scroll-view {
+    max-height: 300px;
+    padding: 0;
+}
+
+.yetanotherradio-scroll-view .popup-menu-item {
+    color: white;
+}
+
+.yetanotherradio-scroll-view .popup-menu-item StLabel {
+    color: white;
+}

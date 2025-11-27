@@ -33,6 +33,19 @@
       <summary>Auto-play last station</summary>
       <description>Automatically play the last played station when the extension is enabled</description>
     </key>
+    
+    <key name="enable-media-keys" type="b">
+      <default>true</default>
+      <summary>Enable media keys</summary>
+      <description>Enable global keyboard media keys (Play/Pause, Stop) to control playback</description>
+    </key>
+    
+    <key name="volume" type="i">
+      <default>100</default>
+      <summary>Volume</summary>
+      <description>Playback volume (0-100)</description>
+      <range min="0" max="100"/>
+    </key>
   </schema>
 </schemalist>
 

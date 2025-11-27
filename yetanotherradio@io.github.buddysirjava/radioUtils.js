@@ -1,8 +1,11 @@
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup';
 
-const DOMAIN = 'yetanotherradio@io.github.buddysirjava';
-const _ = (s) => GLib.dgettext(DOMAIN, s);
+let _ = (s) => s;
+
+export function initTranslations(gettextFunction) {
+    _ = gettextFunction;
+}
 
 export const USER_AGENT = 'yetanotherradio-extension/1.0';
 export const STORAGE_PATH = GLib.build_filenamev([
@@ -191,7 +194,7 @@ export class RadioBrowserClient {
             } else if (message.status_code >= 500) {
                 throw new Error(_('Server error. Please try again later.'));
             } else {
-                throw new Error(_('Request failed with status %d').format(message.status_code));
+                throw new Error(_('Request failed with status %s').format(message.status_code));
             }
         }
 
