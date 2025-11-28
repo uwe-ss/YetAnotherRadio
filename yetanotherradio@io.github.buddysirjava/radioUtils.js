@@ -87,6 +87,45 @@ export function stationDisplayName(station) {
     return `${base}${country}`;
 }
 
+export function truncateString(str, maxLength = 30) {
+    if (!str || str.length <= maxLength) return str;
+    return str.substring(0, maxLength) + '...';
+}
+
+export function validateUrl(url) {
+    if (!url || typeof url !== 'string')
+        return false;
+
+    const urlPattern = /^(https?|icecast|shoutcast|mms|rtsp|rtmp):\/\/.+/i;
+    return urlPattern.test(url.trim());
+}
+
+export function generateManualStationUuid() {
+    return `manual-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
+
+export function createStationFromRadioBrowser(station) {
+    return {
+        uuid: station.stationuuid,
+        name: station.name,
+        url: station.url_resolved || station.url,
+        homepage: station.homepage,
+        favicon: station.favicon,
+        countrycode: station.countrycode,
+    };
+}
+
+export function createManualStation(name, url) {
+    return {
+        uuid: generateManualStationUuid(),
+        name: name,
+        url: url,
+        homepage: '',
+        favicon: '',
+        countrycode: '',
+    };
+}
+
 export class RadioBrowserClient {
     constructor(settings = null) {
         const timeout = settings?.get_int('http-request-timeout') ?? 10;

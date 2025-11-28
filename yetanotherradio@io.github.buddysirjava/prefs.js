@@ -7,7 +7,17 @@ import Gio from 'gi://Gio';
 
 import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-import { loadStations, saveStations, stationDisplayName, RadioBrowserClient, initTranslations } from './radioUtils.js';
+import {
+    loadStations,
+    saveStations,
+    stationDisplayName,
+    RadioBrowserClient,
+    initTranslations,
+    validateUrl,
+    createStationFromRadioBrowser,
+    createManualStation,
+    truncateString,
+} from './radioUtils.js';
 
 initTranslations(_);
 
@@ -59,12 +69,12 @@ const SavedStationsPage = GObject.registerClass(
                 return;
             }
 
-            this._stations.forEach((station, index) => {
+            this._stations.forEach((station) => {
                 const displayName = stationDisplayName(station);
-                const truncatedName = displayName.length > 30 ? displayName.substring(0, 30) + '...' : displayName;
+                const truncatedName = truncateString(displayName);
                 const row = new Adw.ActionRow({
                     title: truncatedName,
-                    subtitle: station.url ? (station.url.length > 30 ? station.url.substring(0, 30) + '...' : station.url) : '',
+                    subtitle: truncateString(station.url || ''),
                 });
 
                 const dragHandle = new Gtk.Image({
@@ -232,7 +242,7 @@ const SavedStationsPage = GObject.registerClass(
                         return;
                     }
 
-                    if (!this._validateUrl(newUrl)) {
+                    if (!validateUrl(newUrl)) {
                         return;
                     }
 
@@ -265,13 +275,6 @@ const SavedStationsPage = GObject.registerClass(
             }
         }
 
-        _validateUrl(url) {
-            if (!url || typeof url !== 'string')
-                return false;
-
-            const urlPattern = /^(https?|icecast|shoutcast|mms|rtsp|rtmp):\/\/.+/i;
-            return urlPattern.test(url.trim());
-        }
     });
 
 const AddStationsPage = GObject.registerClass(
@@ -326,19 +329,13 @@ const AddStationsPage = GObject.registerClass(
             });
             this._searchButton.connect('clicked', () => this._performSearch());
             this._searchRow.add_suffix(this._searchButton);
-            this._searchGroup.add(this._searchRow);
-
-            this._statusRow = new Adw.ActionRow({
-                title: _('Status'),
-                subtitle: _('Enter a query to start searching.'),
-            });
-            this._statusRow.set_sensitive(false);
-            this._searchGroup.add(this._statusRow);
 
             this._loadingSpinner = new Gtk.Spinner();
             this._loadingSpinner.set_size_request(16, 16);
-            this._statusRow.add_suffix(this._loadingSpinner);
             this._loadingSpinner.set_visible(false);
+            this._searchRow.add_suffix(this._loadingSpinner);
+
+            this._searchGroup.add(this._searchRow);
 
             this._resultsGroup = new Adw.PreferencesGroup({
                 title: _('Search results'),
@@ -346,6 +343,8 @@ const AddStationsPage = GObject.registerClass(
             this._resultsGroup.set_visible(false);
             this.add(this._resultsGroup);
             this._resultRows = [];
+            this._resultRowMap = new Map();
+            this._newlyAddedStations = new Set();
 
             this._manualGroup = new Adw.PreferencesGroup({
                 title: _('Add station manually'),
@@ -381,6 +380,7 @@ const AddStationsPage = GObject.registerClass(
 
         setStations(stations) {
             this._stations = stations;
+            this._refreshResultsState();
         }
 
         destroy() {
@@ -418,51 +418,36 @@ const AddStationsPage = GObject.registerClass(
             );
         }
 
-        _setStatus(text, showSpinner = false) {
-            this._statusRow.subtitle = text;
-            if (this._loadingSpinner) {
-                if (showSpinner) {
-                    this._loadingSpinner.start();
-                    this._loadingSpinner.set_visible(true);
-                } else {
-                    this._loadingSpinner.stop();
-                    this._loadingSpinner.set_visible(false);
-                }
-            }
-        }
-
         async _performSearch() {
             if (this._searching)
                 return;
 
             const query = this._searchRow.text?.trim();
             if (!query) {
-                this._setStatus(_('Please enter a search term.'), false);
                 return;
             }
 
             this._searching = true;
             this._searchButton.sensitive = false;
-            this._setStatus(_('Searching...'), true);
+            this._loadingSpinner.start();
+            this._loadingSpinner.set_visible(true);
             this._clearResultRows();
             this._resultsGroup.set_visible(true);
 
             try {
                 const stations = await this._client.searchStations(query);
                 if (!stations.length) {
-                    this._setStatus(_('No stations found.'), false);
                     return;
                 }
 
                 this._populateResults(stations);
-                this._setStatus(_('Select a station to save it.'), false);
             } catch (error) {
                 console.error('Radio search failed', error);
-                const errorMsg = error.message || _('Failed to fetch stations.');
-                this._setStatus(_('Error: %s').format(errorMsg), false);
             } finally {
                 this._searching = false;
                 this._searchButton.sensitive = true;
+                this._loadingSpinner.stop();
+                this._loadingSpinner.set_visible(false);
             }
         }
 
@@ -471,21 +456,42 @@ const AddStationsPage = GObject.registerClass(
 
             const searchLimit = this._settings?.get_int('search-result-limit') ?? 25;
             stations.slice(0, searchLimit).forEach(station => {
+                const isAlreadySaved = this._stations.some(saved => saved.uuid === station.stationuuid);
+
                 const row = new Adw.ActionRow({
                     title: stationDisplayName(station),
                     subtitle: station.url_resolved || station.url || station.homepage || '',
-                    activatable: true,
+                    activatable: !isAlreadySaved,
                 });
-
-                row.connect('activated', () => this._saveStationFromResult(station));
 
                 const saveButton = new Gtk.Button({
-                    icon_name: 'list-add-symbolic',
-                    tooltip_text: _('Add to saved stations'),
+                    icon_name: isAlreadySaved ? 'user-trash-symbolic' : 'list-add-symbolic',
+                    tooltip_text: isAlreadySaved ? _('Remove from saved stations') : _('Add to saved stations'),
                     has_frame: false,
                 });
-                saveButton.connect('clicked', () => this._saveStationFromResult(station));
+
+                let buttonHandlerId;
+                let rowHandlerId = null;
+
+                if (isAlreadySaved) {
+                    buttonHandlerId = saveButton.connect('clicked', () => this._removeStationFromResult(station));
+                } else {
+                    buttonHandlerId = saveButton.connect('clicked', () => this._saveStationFromResult(station));
+                    rowHandlerId = row.connect('activated', () => this._saveStationFromResult(station));
+                }
+
                 row.add_suffix(saveButton);
+                row.set_sensitive(true);
+                row.set_activatable(!isAlreadySaved);
+                saveButton.set_sensitive(true);
+
+                this._resultRowMap.set(station.stationuuid, {
+                    row,
+                    button: saveButton,
+                    station,
+                    buttonHandlerId,
+                    rowHandlerId
+                });
 
                 this._resultsGroup.add(row);
                 this._resultRows.push(row);
@@ -504,42 +510,149 @@ const AddStationsPage = GObject.registerClass(
         _clearResultRows() {
             this._resultRows.forEach(row => this._resultsGroup.remove(row));
             this._resultRows = [];
+            this._resultRowMap.clear();
+            this._newlyAddedStations.clear();
         }
 
         _saveStationFromResult(station) {
-            const entry = {
-                uuid: station.stationuuid,
-                name: station.name,
-                url: station.url_resolved || station.url,
-                homepage: station.homepage,
-                favicon: station.favicon,
-                countrycode: station.countrycode,
-            };
+            const entry = createStationFromRadioBrowser(station);
 
             if (!entry.url) {
-                this._setStatus(_('Selected station does not have a stream URL.'), false);
                 return;
             }
 
             if (this._stations.some(saved => saved.uuid === entry.uuid)) {
-                this._setStatus(_('Station already saved.'), false);
                 return;
             }
 
             this._stations.push(entry);
             this._stations = saveStations(this._stations);
-            this._setStatus(_('Saved "%s".').format(entry.name || _('station')), false);
+            this._newlyAddedStations.add(entry.uuid);
+
+            const rowData = this._resultRowMap.get(station.stationuuid);
+            if (rowData) {
+                const { row, button, rowHandlerId } = rowData;
+
+                if (rowData.buttonHandlerId) {
+                    button.disconnect(rowData.buttonHandlerId);
+                }
+                if (rowHandlerId) {
+                    row.disconnect(rowHandlerId);
+                    rowData.rowHandlerId = null;
+                }
+
+                button.set_icon_name('user-trash-symbolic');
+                button.set_tooltip_text(_('Remove from saved stations'));
+                rowData.buttonHandlerId = button.connect('clicked', () => this._removeStationFromResult(station));
+
+                row.set_activatable(false);
+                row.set_sensitive(true);
+            }
+
             if (this._refreshCallback) {
                 this._refreshCallback(this._stations);
             }
         }
 
-        _validateUrl(url) {
-            if (!url || typeof url !== 'string')
-                return false;
+        _removeStationFromResult(station) {
+            const stationUuid = station.stationuuid || station.uuid;
+            const savedStation = this._stations.find(saved => saved.uuid === stationUuid);
 
-            const urlPattern = /^(https?|icecast|shoutcast|mms|rtsp|rtmp):\/\/.+/i;
-            return urlPattern.test(url.trim());
+            if (!savedStation) {
+                return;
+            }
+
+            const isNewlyAdded = this._newlyAddedStations.has(stationUuid);
+
+            if (!isNewlyAdded) {
+                const dialog = new Adw.MessageDialog({
+                    heading: _('Remove Station?'),
+                    body: _('Are you sure you want to remove "%s"?').format(stationDisplayName(savedStation)),
+                    close_response: 'cancel',
+                    modal: true,
+                });
+
+                dialog.add_response('cancel', _('Cancel'));
+                dialog.add_response('remove', _('Remove'));
+                dialog.set_response_appearance('remove', Adw.ResponseAppearance.DESTRUCTIVE);
+
+                dialog.connect('response', (dialog, response) => {
+                    if (response === 'remove') {
+                        this._performRemoval(stationUuid, savedStation, station);
+                    }
+                });
+
+                const window = this.get_root();
+                if (window && window instanceof Gtk.Window) {
+                    dialog.set_transient_for(window);
+                }
+                dialog.present();
+            } else {
+                this._performRemoval(stationUuid, savedStation, station);
+            }
+        }
+
+        _performRemoval(stationUuid, savedStation, station) {
+            this._stations = this._stations.filter(s => s.uuid !== stationUuid);
+            this._stations = saveStations(this._stations);
+            this._newlyAddedStations.delete(stationUuid);
+
+            const rowData = this._resultRowMap.get(stationUuid);
+            if (rowData) {
+                const { row, button, station: originalStation } = rowData;
+
+                if (rowData.buttonHandlerId) {
+                    button.disconnect(rowData.buttonHandlerId);
+                }
+
+                button.set_icon_name('list-add-symbolic');
+                button.set_tooltip_text(_('Add to saved stations'));
+                rowData.buttonHandlerId = button.connect('clicked', () => this._saveStationFromResult(originalStation));
+
+                row.set_activatable(true);
+                row.set_sensitive(true);
+
+                if (!rowData.rowHandlerId) {
+                    rowData.rowHandlerId = row.connect('activated', () => this._saveStationFromResult(originalStation));
+                }
+            }
+
+            if (this._refreshCallback) {
+                this._refreshCallback(this._stations);
+            }
+        }
+
+        _refreshResultsState() {
+            this._resultRowMap.forEach((rowData, stationUuid) => {
+                const { row, button, station } = rowData;
+                const isAlreadySaved = this._stations.some(saved => saved.uuid === stationUuid);
+
+                if (rowData.buttonHandlerId) {
+                    button.disconnect(rowData.buttonHandlerId);
+                }
+                if (rowData.rowHandlerId) {
+                    row.disconnect(rowData.rowHandlerId);
+                    rowData.rowHandlerId = null;
+                }
+
+                if (isAlreadySaved) {
+                    button.set_icon_name('user-trash-symbolic');
+                    button.set_tooltip_text(_('Remove from saved stations'));
+                    rowData.buttonHandlerId = button.connect('clicked', () => this._removeStationFromResult(station));
+
+                    row.set_activatable(false);
+                    row.set_sensitive(true);
+                } else {
+                    button.set_icon_name('list-add-symbolic');
+                    button.set_tooltip_text(_('Add to saved stations'));
+                    rowData.buttonHandlerId = button.connect('clicked', () => this._saveStationFromResult(station));
+
+                    row.set_activatable(true);
+                    row.set_sensitive(true);
+
+                    rowData.rowHandlerId = row.connect('activated', () => this._saveStationFromResult(station));
+                }
+            });
         }
 
         _saveManualStation() {
@@ -547,31 +660,20 @@ const AddStationsPage = GObject.registerClass(
             const url = this._manualUrlRow.text?.trim();
 
             if (!name) {
-                this._setStatus(_('Please enter a station name.'), false);
                 return;
             }
 
             if (!url) {
-                this._setStatus(_('Please enter a stream URL.'), false);
                 return;
             }
 
-            if (!this._validateUrl(url)) {
-                this._setStatus(_('Please enter a valid URL.'), false);
+            if (!validateUrl(url)) {
                 return;
             }
 
-            const entry = {
-                uuid: `manual-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-                name: name,
-                url: url,
-                homepage: '',
-                favicon: '',
-                countrycode: '',
-            };
+            const entry = createManualStation(name, url);
 
             if (this._stations.some(saved => saved.url === entry.url)) {
-                this._setStatus(_('A station with this URL is already saved.'), false);
                 return;
             }
 
@@ -580,14 +682,11 @@ const AddStationsPage = GObject.registerClass(
                 this._stations = saveStations(this._stations);
                 this._manualNameRow.text = '';
                 this._manualUrlRow.text = '';
-                this._setStatus(_('Saved "%s".').format(entry.name), false);
                 if (this._refreshCallback) {
                     this._refreshCallback(this._stations);
                 }
             } catch (error) {
                 console.error('Failed to save manual station', error);
-                const errorMsg = error.message || _('Failed to save station.');
-                this._setStatus(_('Error: %s').format(errorMsg), false);
             }
         }
     });
