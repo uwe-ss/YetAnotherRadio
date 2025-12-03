@@ -8,12 +8,6 @@ This extension uses [Radio Browser](https://www.radio-browser.info/)'s API to fe
 gstreamer (Usually being installed with GNOME).
 
 
-## Screenshots
-<img src="assets/GeneralMenu.png" width="400" alt="General Menu">
-<img src="assets/menu.png" width="400" alt="Menu">
-<img src="assets/StationList.png" width="400" alt="Station List">
-<img src="assets/AddingStation.png" width="400" alt="Adding Station">
-
 ## Features
 
 - Play internet radio stations from the panel menu
@@ -30,7 +24,7 @@ gstreamer (Usually being installed with GNOME).
 <td><img src="assets/menu.png" width="400" alt="Menu"></td>
 <td><img src="assets/StationList.png" width="400" alt="Station List"></td></tr>
 <tr><td><img src="assets/AddingStation.png" width="400" alt="Adding Station"></td>
-<td><img src="assets/Backup.png" width="400" alt="Backup"></td></tr>
+<td><img src="assets/GeneralMenu.png" width="400" alt="General Menu"></td></tr>
 </table>
 
 ## Installation
