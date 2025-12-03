@@ -1,16 +1,11 @@
 # Yet Another Radio
+
 > Heavily inspired by [Advanced Radio Player Applet](https://store.kde.org/p/2136933/)
 
 A GNOME Shell extension for listening to internet radio stations directly from your panel.
 
-This extension uses [Radio Browser](https://www.radio-browser.info/)'s API to fetch radio urls and play them using gstreamer (Usually being installed with GNOME).
-
-## Screenshots
-
-<img src="assets/menu.png" width="400" alt="Menu">
-<img src="assets/StationList.png" width="400" alt="Station List">
-<img src="assets/AddingStation.png" width="400" alt="Adding Station">
-<img src="assets/Backup.png" width="400" alt="Backup">
+This extension uses [Radio Browser](https://www.radio-browser.info/)'s API to fetch radio urls and play them using
+gstreamer (Usually being installed with GNOME).
 
 ## Features
 
@@ -22,6 +17,14 @@ This extension uses [Radio Browser](https://www.radio-browser.info/)'s API to fe
 - View track metadata, album art, and bitrate
 - Play/pause controls
 
+## Screenshots
+
+<table style="width: 100%;display:flex;justify-content: center;"><tr>
+<td><img src="assets/menu.png" width="400" alt="Menu"></td>
+<td><img src="assets/StationList.png" width="400" alt="Station List"></td></tr>
+<tr><td><img src="assets/AddingStation.png" width="400" alt="Adding Station"></td>
+<td><img src="assets/Backup.png" width="400" alt="Backup"></td></tr>
+</table>
 
 ## Installation
 
@@ -31,7 +34,8 @@ Or Copy the extension directory to `~/.local/share/gnome-shell/extensions/` and 
 
 ## Translating
 
-If you would like to help translate Yet Another Radio into your language, see the detailed instructions in [TRANSLATING.md](TRANSLATING.md).
+If you would like to help translate Yet Another Radio into your language, see the detailed instructions
+in [TRANSLATING.md](TRANSLATING.md).
 
 ## License
 
