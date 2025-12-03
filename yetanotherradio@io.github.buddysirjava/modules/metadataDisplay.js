@@ -2,6 +2,7 @@ import St from 'gi://St';
 import Gio from 'gi://Gio';
 import Gst from 'gi://Gst';
 import GLib from 'gi://GLib';
+import Clutter from 'gi://Clutter';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
@@ -9,16 +10,18 @@ import ScrollableLabel from './scrollableLabel.js';
 
 const METADATA_ICON_SIZE = 64;
 
-export function createMetadataItem() {
+export function createMetadataItem(playPauseCallback, stopCallback) {
     const box = new St.BoxLayout({
         vertical: false,
-        style_class: 'metadata-item-box'
+        style_class: 'metadata-item-box',
+        y_align: Clutter.ActorAlign.CENTER
     });
 
     const thumbnail = new St.Icon({
         icon_name: 'audio-x-generic-symbolic',
         icon_size: METADATA_ICON_SIZE,
-        style_class: 'metadata-thumbnail'
+        style_class: 'metadata-thumbnail',
+        reactive: true
     });
     box.add_child(thumbnail);
 
@@ -42,15 +45,64 @@ export function createMetadataItem() {
 
     const qualityLabel = new St.Label({
         text: '',
-        style_class: 'metadata-quality'
+        style_class: 'metadata-quality',
+        y_align: Clutter.ActorAlign.CENTER,
+        x_expand: false
     });
-    textBox.add_child(qualityLabel);
+
+    const bottomRow = new St.BoxLayout({
+        vertical: false,
+        style_class: 'metadata-bottom-row',
+        x_expand: true,
+        y_align: Clutter.ActorAlign.CENTER
+    });
+
+    bottomRow.add_child(qualityLabel);
+
+    const controlsBox = new St.BoxLayout({
+        style_class: 'metadata-controls-pill',
+        vertical: false,
+        x_align: Clutter.ActorAlign.END,
+        y_align: Clutter.ActorAlign.CENTER,
+        x_expand: true,
+        reactive: true
+    });
+
+    controlsBox.connect('enter-event', () => {
+        return Clutter.EVENT_STOP;
+    });
+    controlsBox.connect('leave-event', () => {
+        return Clutter.EVENT_STOP;
+    });
+
+    const playPauseBtn = new St.Button({
+        style_class: 'metadata-overlay-button',
+        child: new St.Icon({
+            icon_name: 'media-playback-pause-symbolic',
+            style_class: 'metadata-overlay-icon'
+        })
+    });
+    playPauseBtn.connect('clicked', () => playPauseCallback?.());
+    controlsBox.add_child(playPauseBtn);
+
+    const stopBtn = new St.Button({
+        style_class: 'metadata-overlay-button',
+        child: new St.Icon({
+            icon_name: 'media-playback-stop-symbolic',
+            style_class: 'metadata-overlay-icon'
+        })
+    });
+    stopBtn.connect('clicked', () => stopCallback?.());
+    controlsBox.add_child(stopBtn);
+
+    bottomRow.add_child(controlsBox);
+    textBox.add_child(bottomRow);
 
     box.add_child(textBox);
 
     const item = new PopupMenu.PopupBaseMenuItem({
-        reactive: false,
-        can_focus: false
+        reactive: true,
+        can_focus: true
     });
     item.add_child(box);
 
@@ -58,11 +110,22 @@ export function createMetadataItem() {
     item._titleLabel = titleLabel;
     item._artistLabel = artistLabel;
     item._qualityLabel = qualityLabel;
+    item._playPauseBtn = playPauseBtn;
 
     item._titleScrollable = new ScrollableLabel(titleLabel, textBox, 30);
     item._artistScrollable = new ScrollableLabel(artistLabel, textBox, 30);
 
     return item;
+}
+
+export function updatePlaybackStateIcon(item, playbackState) {
+    if (!item || !item._playPauseBtn) return;
+    const icon = item._playPauseBtn.child;
+    if (playbackState === 'playing') {
+        icon.icon_name = 'media-playback-pause-symbolic';
+    } else {
+        icon.icon_name = 'media-playback-start-symbolic';
+    }
 }
 
 function extractImageFromSample(sample) {
@@ -71,17 +134,23 @@ function extractImageFromSample(sample) {
 
     try {
         const buffer = sample.get_buffer();
-        if (!buffer)
+        if (!buffer) {
+            console.debug('extractImageFromSample: No buffer');
             return null;
+        }
 
         const mapInfo = buffer.map(Gst.MapFlags.READ);
-        if (!mapInfo)
+        if (!mapInfo) {
+            console.debug('extractImageFromSample: Could not map buffer');
             return null;
+        }
 
         try {
             const data = mapInfo.data;
-            if (!data || data.length === 0)
+            if (!data || data.length === 0) {
+                console.debug('extractImageFromSample: Empty data');
                 return null;
+            }
 
             let extension = 'jpg';
             const caps = sample.get_caps();
@@ -108,6 +177,9 @@ function extractImageFromSample(sample) {
             outputStream.close(null);
 
             return tmpFile.get_uri();
+        } catch (e) {
+            console.debug('Error writing image data:', e);
+            return null;
         } finally {
             buffer.unmap(mapInfo);
         }
@@ -167,12 +239,10 @@ export function queryPlayerTags(player, currentMetadata) {
     }
 }
 
-export function updateMetadataDisplay(settings, metadataItem, player, nowPlaying, currentMetadata) {
+export function updateMetadataDisplay(settings, metadataItem, nowPlaying, currentMetadata) {
     const showMetadata = settings?.get_boolean('show-metadata') ?? true;
-    if (!showMetadata || !metadataItem.visible || !player)
+    if (!showMetadata || !metadataItem.visible)
         return;
-
-    queryPlayerTags(player, currentMetadata);
 
     let title = currentMetadata.title || _('Unknown title');
     let artist = currentMetadata.artist || _('Unknown artist');
@@ -206,6 +276,7 @@ export function updateMetadataDisplay(settings, metadataItem, player, nowPlaying
             const icon = new Gio.FileIcon({ file: file });
             metadataItem._thumbnail.gicon = icon;
             metadataItem._thumbnail.icon_size = METADATA_ICON_SIZE;
+            metadataItem._thumbnail.icon_name = null;
             thumbnailSet = true;
         } catch (e) {
             console.debug(e);
@@ -218,6 +289,7 @@ export function updateMetadataDisplay(settings, metadataItem, player, nowPlaying
             const icon = new Gio.FileIcon({ file: file });
             metadataItem._thumbnail.gicon = icon;
             metadataItem._thumbnail.icon_size = METADATA_ICON_SIZE;
+            metadataItem._thumbnail.icon_name = null;
             thumbnailSet = true;
         } catch (e) {
             console.debug(e);
@@ -225,6 +297,7 @@ export function updateMetadataDisplay(settings, metadataItem, player, nowPlaying
     }
 
     if (!thumbnailSet) {
+        metadataItem._thumbnail.gicon = null;
         metadataItem._thumbnail.icon_name = 'audio-x-generic-symbolic';
     }
 }
@@ -232,6 +305,17 @@ export function updateMetadataDisplay(settings, metadataItem, player, nowPlaying
 export function loadStationIcon(item, faviconUrl) {
     if (!faviconUrl)
         return;
+
+    if (faviconUrl.startsWith('file://')) {
+        const path = faviconUrl.replace('file://', '');
+        if (!GLib.file_test(path, GLib.FileTest.EXISTS)) {
+            return;
+        }
+    } else if (faviconUrl.startsWith('/')) {
+        if (!GLib.file_test(faviconUrl, GLib.FileTest.EXISTS)) {
+            return;
+        }
+    }
 
     try {
         const file = Gio.File.new_for_uri(faviconUrl);

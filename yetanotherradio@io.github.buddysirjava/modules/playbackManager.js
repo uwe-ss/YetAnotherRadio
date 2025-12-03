@@ -6,215 +6,277 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { loadStations, saveStations, stationDisplayName } from '../radioUtils.js';
-import { parseMetadataTags } from './metadataDisplay.js';
+import { parseMetadataTags, queryPlayerTags } from './metadataDisplay.js';
 
-export function ensurePlayer(player, settings, currentMetadata, bus, busHandlerId, handleTagMessageCallback, stopPlaybackCallback, replayStationCallback) {
-    if (!Gst.is_initialized()) {
-        Gst.init(null);
+export default class PlaybackManager {
+    constructor(settings, callbacks) {
+        this._settings = settings;
+        this._callbacks = callbacks || {};
+
+        this._player = null;
+        this._bus = null;
+        this._busHandlerId = null;
+
+        this._metadataTimer = null;
+        this._reconnectId = null;
+
+        this._nowPlaying = null;
+        this._playbackState = 'stopped';
+        this._pausedAt = null;
+
+        this._currentMetadata = {
+            title: null,
+            artist: null,
+            albumArt: null,
+            bitrate: null,
+            nowPlaying: null,
+            playbackState: 'stopped'
+        };
+
+        this._initGst();
     }
 
-    if (player)
-        return { player, bus, busHandlerId };
+    _initGst() {
+        if (!Gst.is_initialized()) {
+            Gst.init(null);
+        }
+    }
 
-    player = Gst.ElementFactory.make('playbin', 'radio-player');
+    get currentMetadata() {
+        return this._currentMetadata;
+    }
 
-    const volume = settings.get_int('volume') / 100.0;
-    player.set_volume(GstAudio.StreamVolumeFormat.CUBIC, volume);
+    get playbackState() {
+        return this._playbackState;
+    }
 
-    const fakeVideoSink = Gst.ElementFactory.make('fakesink', 'fake-video-sink');
-    player.set_property('video-sink', fakeVideoSink);
+    get nowPlaying() {
+        return this._nowPlaying;
+    }
 
-    bus = player.get_bus();
-    bus.add_signal_watch();
-    busHandlerId = bus.connect('message', (b, message) => {
+    _ensurePlayer() {
+        if (this._player) return;
+
+        this._player = Gst.ElementFactory.make('playbin', 'radio-player');
+        if (!this._player) {
+            throw new Error('GStreamer playbin plugin missing');
+        }
+
+        const volume = (this._settings.get_int('volume') ?? 100) / 100.0;
+        this._player.set_volume(GstAudio.StreamVolumeFormat.CUBIC, volume);
+
+        const fakeVideoSink = Gst.ElementFactory.make('fakesink', 'fake-video-sink');
+        this._player.set_property('video-sink', fakeVideoSink);
+
+        this._bus = this._player.get_bus();
+        this._bus.add_signal_watch();
+        this._busHandlerId = this._bus.connect('message', (b, message) => this._handleBusMessage(message));
+    }
+
+    _handleBusMessage(message) {
         if (message.type === Gst.MessageType.TAG) {
-            handleTagMessageCallback(message, currentMetadata);
+            const tagList = message.parse_tag();
+            const metadata = parseMetadataTags(tagList);
+            if (metadata) {
+                if (metadata.title) this._currentMetadata.title = metadata.title;
+                if (metadata.artist) this._currentMetadata.artist = metadata.artist;
+                if (metadata.albumArt) this._currentMetadata.albumArt = metadata.albumArt;
+                if (metadata.bitrate) this._currentMetadata.bitrate = metadata.bitrate;
+
+                if (this._callbacks.onMetadataUpdate) {
+                    this._callbacks.onMetadataUpdate();
+                }
+            }
         } else if (message.type === Gst.MessageType.ERROR) {
             const [error, debug] = message.parse_error();
             console.error(error, debug);
+
             let errorBody = _('Could not play the selected station.');
             let errorMessage = '';
             if (error) {
-                if (error.message && typeof error.message === 'string') {
-                    errorMessage = String(error.message);
-                    errorBody = errorMessage;
-                } else if (debug && typeof debug === 'string') {
-                    errorMessage = String(debug);
-                    errorBody = errorMessage;
-                } else if (typeof error === 'string') {
-                    errorMessage = String(error);
-                    errorBody = errorMessage;
-                }
+                if (error.message) errorMessage = String(error.message);
+                else errorMessage = String(error);
+            } else if (debug) {
+                errorMessage = String(debug);
             }
+
+            if (errorMessage) errorBody = errorMessage;
 
             if (errorMessage &&
                 (errorMessage.includes('seeking') || errorMessage.includes('seek')) &&
-                currentMetadata.nowPlaying &&
-                currentMetadata.playbackState === 'playing') {
-                console.log('Seeking error detected, reconnecting to stream...');
-                const station = currentMetadata.nowPlaying;
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
-                    if (replayStationCallback) {
-                        replayStationCallback(station);
-                    }
+                this._nowPlaying &&
+                this._playbackState === 'playing') {
+
+                console.debug('Seeking error detected, reconnecting to stream...');
+                const station = this._nowPlaying;
+
+                if (this._reconnectId) {
+                    GLib.source_remove(this._reconnectId);
+                }
+
+                this._reconnectId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+                    this.play(station);
+                    this._reconnectId = null;
                     return false;
                 });
             } else {
                 Main.notifyError(_('Playback error'), errorBody);
-                stopPlaybackCallback();
+                this.stop();
             }
+
         } else if (message.type === Gst.MessageType.EOS) {
-            stopPlaybackCallback();
+            this.stop();
         }
-    });
-    return { player, bus, busHandlerId };
-}
-
-export function handleTagMessage(message, currentMetadata) {
-    const tagList = message.parse_tag();
-    const metadata = parseMetadataTags(tagList);
-    if (metadata) {
-        if (metadata.title) currentMetadata.title = metadata.title;
-        if (metadata.artist) currentMetadata.artist = metadata.artist;
-        if (metadata.albumArt) currentMetadata.albumArt = metadata.albumArt;
-        if (metadata.bitrate) currentMetadata.bitrate = metadata.bitrate;
     }
-}
 
-export function startMetadataUpdate(settings, metadataTimer, updateMetadataDisplayCallback) {
-    stopMetadataUpdate(metadataTimer);
-    const interval = settings?.get_int('metadata-update-interval') ?? 2;
-    metadataTimer = GLib.timeout_add_seconds(
-        GLib.PRIORITY_DEFAULT,
-        interval,
-        () => {
-            updateMetadataDisplayCallback();
-            return true;
+    play(station) {
+        try {
+            this._ensurePlayer();
+
+            this._currentMetadata.title = null;
+            this._currentMetadata.artist = null;
+            this._currentMetadata.albumArt = null;
+            this._currentMetadata.bitrate = null;
+
+            this._player.set_state(Gst.State.NULL);
+            this._player.set_property('uri', station.url);
+
+            const vol = (this._settings.get_int('volume') ?? 100) / 100;
+            this._player.set_volume(GstAudio.StreamVolumeFormat.CUBIC, vol);
+
+            this._player.set_state(Gst.State.PLAYING);
+
+            this._updateStationHistory(station);
+
+            this._nowPlaying = station;
+            this._playbackState = 'playing';
+
+            this._currentMetadata.nowPlaying = station;
+            this._currentMetadata.playbackState = 'playing';
+
+            if (this._callbacks.onStateChanged) this._callbacks.onStateChanged('playing');
+            if (this._callbacks.onStationChanged) this._callbacks.onStationChanged(station);
+            if (this._callbacks.onVisibilityChanged) this._callbacks.onVisibilityChanged(true);
+
+            this._startMetadataUpdate();
+
+            Main.notify(_('Playing %s').format(stationDisplayName(station)));
+
+        } catch (error) {
+            console.error(error, 'Failed to start playback');
+            Main.notifyError(_('Playback error'), String(error));
+            this.stop();
         }
-    );
-    return metadataTimer;
-}
-
-export function stopMetadataUpdate(metadataTimer) {
-    if (metadataTimer) {
-        GLib.source_remove(metadataTimer);
-        metadataTimer = null;
     }
-    return metadataTimer;
-}
 
-export function playStation(station, player, settings, currentMetadata, metadataItem, volumeItem, playbackControlItem, startMetadataUpdateCallback, updateStationHistoryCallback, updatePlaybackControlCallback, refreshStationsMenuCallback) {
-    try {
-        currentMetadata.title = null;
-        currentMetadata.artist = null;
-        currentMetadata.albumArt = null;
-        currentMetadata.bitrate = null;
+    toggle() {
+        if (!this._player) return;
 
-        player.set_state(Gst.State.NULL);
-        player.set_property('uri', station.url);
+        if (this._playbackState === 'playing') {
+            this._player.set_state(Gst.State.PAUSED);
+            this._playbackState = 'paused';
+            this._pausedAt = Date.now();
 
-        const vol = (settings.get_int('volume') ?? 100) / 100;
-        player.set_volume(GstAudio.StreamVolumeFormat.CUBIC, vol);
+            this._currentMetadata.playbackState = 'paused';
+            if (this._callbacks.onStateChanged) this._callbacks.onStateChanged('paused');
 
-        player.set_state(Gst.State.PLAYING);
+        } else if (this._playbackState === 'paused') {
+            const pauseDuration = this._pausedAt ? Date.now() - this._pausedAt : 0;
+            const RECONNECT_THRESHOLD = 5000;
 
-        station.lastPlayed = Date.now();
-        updateStationHistoryCallback(station);
+            if (pauseDuration > RECONNECT_THRESHOLD && this._nowPlaying) {
+                this.play(this._nowPlaying);
+            } else {
+                this._player.set_state(Gst.State.PLAYING);
+                this._playbackState = 'playing';
+                this._currentMetadata.playbackState = 'playing';
 
-        currentMetadata.nowPlaying = station;
-        currentMetadata.playbackState = 'playing';
-        updatePlaybackControlCallback('playing');
-        playbackControlItem.visible = true;
-        volumeItem.visible = true;
-        const showMetadata = settings?.get_boolean('show-metadata') ?? true;
-        metadataItem.visible = showMetadata;
-        if (showMetadata) {
-            startMetadataUpdateCallback();
+                if (this._callbacks.onStateChanged) this._callbacks.onStateChanged('playing');
+            }
+            this._pausedAt = null;
         }
-        Main.notify(_('Playing %s').format(stationDisplayName(station)));
-        return { nowPlaying: currentMetadata.nowPlaying, playbackState: currentMetadata.playbackState };
-    } catch (error) {
-        console.error(error, 'Failed to start playback');
-        const errorBody = (error && typeof error === 'object' && error.message)
-            ? String(error.message)
-            : _('Could not start the selected station.');
-        Main.notifyError(_('Playback error'), errorBody);
-        return { nowPlaying: null, playbackState: 'stopped' };
     }
-}
 
-export function updateStationHistory(station) {
-    const stations = loadStations();
-    const stationIndex = stations.findIndex(s => s.uuid === station.uuid);
-    if (stationIndex >= 0) {
-        stations[stationIndex].lastPlayed = Date.now();
-        saveStations(stations);
-    }
-}
-
-export function updatePlaybackControl(playbackState, playbackControlItem) {
-    if (playbackState === 'playing') {
-        playbackControlItem.label.text = _('Pause');
-    } else if (playbackState === 'paused') {
-        playbackControlItem.label.text = _('Resume');
-    }
-}
-
-export function togglePlayback(player, playbackState, pausedAt, nowPlaying, playStationCallback, updatePlaybackControlCallback) {
-    if (!player)
-        return { playbackState, pausedAt };
-
-    if (playbackState === 'playing') {
-        player.set_state(Gst.State.PAUSED);
-        playbackState = 'paused';
-        pausedAt = Date.now();
-        updatePlaybackControlCallback(playbackState);
-    } else if (playbackState === 'paused') {
-        const pauseDuration = pausedAt ? Date.now() - pausedAt : 0;
-        const RECONNECT_THRESHOLD = 5000;
-
-        if (pauseDuration > RECONNECT_THRESHOLD && nowPlaying) {
-            const station = nowPlaying;
-            playStationCallback(station);
-        } else {
-            player.set_state(Gst.State.PLAYING);
-            playbackState = 'playing';
-            updatePlaybackControlCallback(playbackState);
+    stop() {
+        if (this._player) {
+            this._player.set_state(Gst.State.NULL);
         }
-        pausedAt = null;
+
+        this._nowPlaying = null;
+        this._playbackState = 'stopped';
+        this._pausedAt = null;
+
+        this._currentMetadata.nowPlaying = null;
+        this._currentMetadata.playbackState = 'stopped';
+        this._currentMetadata.title = null;
+        this._currentMetadata.artist = null;
+        this._currentMetadata.albumArt = null;
+        this._currentMetadata.bitrate = null;
+
+        this._stopMetadataUpdate();
+
+        if (this._callbacks.onStateChanged) this._callbacks.onStateChanged('stopped');
+        if (this._callbacks.onStationChanged) this._callbacks.onStationChanged(null);
+        if (this._callbacks.onVisibilityChanged) this._callbacks.onVisibilityChanged(false);
     }
-    return { playbackState, pausedAt };
-}
 
-export function handleMediaPlayPause(playbackState, togglePlaybackCallback) {
-    if (playbackState === 'playing' || playbackState === 'paused') {
-        togglePlaybackCallback();
+    setVolume(volume) {
+        if (this._player) {
+            this._player.set_volume(GstAudio.StreamVolumeFormat.CUBIC, volume);
+        }
+    }
+
+    _startMetadataUpdate() {
+        this._stopMetadataUpdate();
+        const interval = this._settings?.get_int('metadata-update-interval') ?? 2;
+        this._metadataTimer = GLib.timeout_add_seconds(
+            GLib.PRIORITY_DEFAULT,
+            interval,
+            () => {
+                queryPlayerTags(this._player, this._currentMetadata);
+                if (this._callbacks.onMetadataUpdate) {
+                    this._callbacks.onMetadataUpdate();
+                }
+                return true;
+            }
+        );
+    }
+
+    _stopMetadataUpdate() {
+        if (this._metadataTimer) {
+            GLib.source_remove(this._metadataTimer);
+            this._metadataTimer = null;
+        }
+    }
+
+    _updateStationHistory(station) {
+        const stations = loadStations();
+        const stationIndex = stations.findIndex(s => s.uuid === station.uuid);
+        if (stationIndex >= 0) {
+            stations[stationIndex].lastPlayed = Date.now();
+            saveStations(stations);
+        }
+    }
+
+    destroy() {
+        this.stop();
+
+        if (this._reconnectId) {
+            GLib.source_remove(this._reconnectId);
+            this._reconnectId = null;
+        }
+
+        if (this._bus) {
+            if (this._busHandlerId) {
+                this._bus.disconnect(this._busHandlerId);
+                this._busHandlerId = null;
+            }
+            this._bus.remove_signal_watch();
+            this._bus = null;
+        }
+
+        if (this._player) {
+            this._player = null;
+        }
     }
 }
-
-export function handleMediaStop(playbackState, stopPlaybackCallback) {
-    if (playbackState === 'playing' || playbackState === 'paused') {
-        stopPlaybackCallback();
-    }
-}
-
-export function stopPlayback(player, nowPlaying, playbackState, pausedAt, playbackControlItem, volumeItem, metadataItem, stopMetadataUpdateCallback, currentMetadata, refreshStationsMenuCallback) {
-    if (!player)
-        return { nowPlaying, playbackState, pausedAt };
-
-    player.set_state(Gst.State.NULL);
-    nowPlaying = null;
-    playbackState = 'stopped';
-    pausedAt = null;
-    playbackControlItem.visible = false;
-    volumeItem.visible = false;
-    metadataItem.visible = false;
-    stopMetadataUpdateCallback();
-    currentMetadata.title = null;
-    currentMetadata.artist = null;
-    currentMetadata.albumArt = null;
-    currentMetadata.bitrate = null;
-    refreshStationsMenuCallback();
-    return { nowPlaying, playbackState, pausedAt };
-}
-

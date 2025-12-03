@@ -1,19 +1,19 @@
 import GLib from 'gi://GLib';
 import Pango from 'gi://Pango';
 
-const ScrollableLabel = class ScrollableLabel {
-    constructor(label, hoverActor, maxLength = 30) {
+export default class ScrollableLabel {
+    constructor(label, hoverActor, maxLength = 17) {
         this._label = label;
         this._hoverActor = hoverActor;
         this._maxLength = maxLength;
         this._originalText = '';
-        this._loopText = '';
+        this._loopChars = [];
         this._loopThreshold = 0;
         this._timeoutId = null;
         this._scrollIndex = 0;
         this._isHovering = false;
 
-        this._label.style = 'width: 22em; text-align: left;';
+        this._label.style = 'text-align: left; width: 15em;';
         this._label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
         this._label.clutter_text.line_wrap = false;
 
@@ -34,9 +34,33 @@ const ScrollableLabel = class ScrollableLabel {
     }
 
     setText(text) {
-        this._originalText = text || '';
-        this._loopText = this._originalText + '   ' + this._originalText;
-        this._loopThreshold = this._originalText.length + 3;
+        const newText = text || '';
+        if (this._originalText === newText) {
+            return;
+        }
+
+        this._originalText = newText;
+        
+        const originalChars = [...this._originalText];
+        
+        if (originalChars.length <= this._maxLength) {
+            this._stopAnimation();
+            this._updateDisplay();
+            return;
+        }
+
+        const separator = '   ';
+        const separatorChars = [...separator];
+        
+        this._loopThreshold = originalChars.length + separatorChars.length;
+
+        this._loopChars = [...originalChars, ...separatorChars, ...originalChars];
+
+        const minLength = this._loopThreshold + this._maxLength;
+        
+        while (this._loopChars.length < minLength) {
+            this._loopChars.push(...separatorChars, ...originalChars);
+        }
 
         this._stopAnimation();
         this._updateDisplay();
@@ -47,7 +71,7 @@ const ScrollableLabel = class ScrollableLabel {
     }
 
     _startAnimation() {
-        if (this._originalText.length <= this._maxLength) return;
+        if ([...this._originalText].length <= this._maxLength) return;
         if (this._timeoutId) return;
 
         this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
@@ -75,16 +99,19 @@ const ScrollableLabel = class ScrollableLabel {
             return;
         }
 
-        if (this._originalText.length <= this._maxLength) {
+        const originalChars = [...this._originalText];
+
+        if (originalChars.length <= this._maxLength) {
             this._label.text = this._originalText;
             return;
         }
 
         if (this._isHovering) {
-            const text = this._loopText.substring(this._scrollIndex, this._scrollIndex + this._maxLength);
-            this._label.text = text + '...';
+            const visibleChars = this._loopChars.slice(this._scrollIndex, this._scrollIndex + this._maxLength);
+            this._label.text = visibleChars.join('') + '...';
         } else {
-            this._label.text = this._originalText.substring(0, this._maxLength) + '...';
+            const visibleChars = originalChars.slice(0, this._maxLength);
+            this._label.text = visibleChars.join('') + '...';
         }
     }
 
@@ -95,6 +122,4 @@ const ScrollableLabel = class ScrollableLabel {
             if (this._leaveId) this._hoverActor.disconnect(this._leaveId);
         }
     }
-};
-
-export default ScrollableLabel;
+}

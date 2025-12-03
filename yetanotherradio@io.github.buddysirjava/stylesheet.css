@@ -10,16 +10,27 @@
 
 .metadata-text-box {
     spacing: 4px;
+    max-width: 180px;
+    min-width: 180px;
 }
 
 .metadata-title {
     font-weight: bold;
     font-size: 1.1em;
+    max-width: 180px !important;
+    width: 180px !important;
 }
 
 .metadata-artist {
     font-size: 0.9em;
     color: rgba(255, 255, 255, 0.7);
+    max-width: 180px !important;
+    width: 180px !important;
+}
+
+.metadata-bottom-row {
+    spacing: 12px;
+    padding-top: 2px;
 }
 
 .metadata-quality {
@@ -53,29 +64,20 @@ preferencespage preferencesgroup actionrow:hover {
     background: transparent;
 }
 
-/* Scope these styles to only the extension's menu */
 .yetanotherradio-menu {
-    max-width: 400px;
+    max-width: 320px;
 }
 
 .yetanotherradio-menu .popup-menu-item {
-    max-width: 400px;
+    max-width: 300px;
+}
+.yetanotherradio-menu .metadata-item-box {
+    max-width: 300px;
 }
 
 .yetanotherradio-menu .popup-menu-item StLabel {
-    /* Width handled by JS */
-}
-
-.yetanotherradio-menu .metadata-title {
-    /* Width handled by JS */
-}
-
-.yetanotherradio-menu .metadata-artist {
-    /* Width handled by JS */
-}
-
-.yetanotherradio-menu .metadata-item-box {
-    max-width: 380px;
+    max-width: 180px !important;
+    width: auto !important;
 }
 
 .yetanotherradio-scroll-view {
@@ -88,5 +90,66 @@ preferencespage preferencesgroup actionrow:hover {
 }
 
 .yetanotherradio-scroll-view .popup-menu-item StLabel {
+    color: white;
+    max-width: 180px !important;
+    width: auto !important;
+}
+
+.yetanotherradio-menu .popup-menu-item.yetanotherradio-current-station StLabel {
+    font-style: italic;
+    color: rgba(200, 200, 200, 0.9);
+}
+
+.metadata-controls-box {
+    spacing: 6px;
+    margin-left: 6px;
+}
+
+.metadata-button {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 6px;
+    border-radius: 99px;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.metadata-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.metadata-button:active {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.metadata-thumbnail-container {
+    min-width: 64px;
+    min-height: 64px;
+}
+
+.metadata-controls-pill {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 2px;
+}
+
+.metadata-overlay-button {
+    min-width: 24px;
+    min-height: 24px;
+    padding: 4px;
+    border-radius: 99px;
+    margin: 0 2px;
+    background-color: transparent;
+}
+
+.metadata-overlay-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.metadata-overlay-button:active {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.metadata-overlay-icon {
+    icon-size: 16px;
     color: white;
 }

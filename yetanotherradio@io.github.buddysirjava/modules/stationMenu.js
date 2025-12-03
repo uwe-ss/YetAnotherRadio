@@ -37,7 +37,7 @@ export function createScrollableSection() {
     return item;
 }
 
-export function createStationMenuItem(station, playStationCallback) {
+export function createStationMenuItem(station, playStationCallback, isNowPlaying = false) {
     const stationName = stationDisplayName(station);
     const item = new PopupMenu.PopupMenuItem(stationName);
     item.connect('activate', () => {
@@ -52,10 +52,14 @@ export function createStationMenuItem(station, playStationCallback) {
         loadStationIcon(item, station.favicon);
     }
 
+    if (isNowPlaying) {
+        item.actor.add_style_class_name('yetanotherradio-current-station');
+    }
+
     return item;
 }
 
-export function refreshStationsMenu(stations, favoritesSection, stationSection, scrollableSection, hintItem, createStationMenuItemCallback) {
+export function refreshStationsMenu(stations, favoritesSection, stationSection, scrollableSection, hintItem, createStationMenuItemCallback, nowPlaying = null) {
     favoritesSection.removeAll();
     stationSection.removeAll();
 
@@ -86,13 +90,23 @@ export function refreshStationsMenu(stations, favoritesSection, stationSection, 
     );
     const regular = stations.filter(s => !s.favorite);
 
+    const isNowPlayingStation = (station) => {
+        if (!nowPlaying)
+            return false;
+
+        if (nowPlaying.uuid && station.uuid)
+            return station.uuid === nowPlaying.uuid;
+
+        return stationDisplayName(station) === stationDisplayName(nowPlaying);
+    };
+
     if (stations.length > 6) {
         favoritesSection.visible = false;
         stationSection.visible = false;
         scrollableSection.visible = true;
 
         const addStation = (station) => {
-            const item = createStationMenuItemCallback(station);
+            const item = createStationMenuItemCallback(station, isNowPlayingStation(station));
             if (scrollableSection.addMenuItem) {
                 scrollableSection.addMenuItem(item);
             } else {
@@ -120,7 +134,7 @@ export function refreshStationsMenu(stations, favoritesSection, stationSection, 
 
         if (favorites.length > 0) {
             favorites.forEach(station => {
-                const item = createStationMenuItemCallback(station);
+                const item = createStationMenuItemCallback(station, isNowPlayingStation(station));
                 favoritesSection.addMenuItem(item);
             });
             favoritesSection.visible = true;
@@ -129,16 +143,8 @@ export function refreshStationsMenu(stations, favoritesSection, stationSection, 
         }
 
         regular.forEach(station => {
-            const item = createStationMenuItemCallback(station);
+            const item = createStationMenuItemCallback(station, isNowPlayingStation(station));
             stationSection.addMenuItem(item);
         });
     }
 }
-
-
-
-
-
-
-
-

@@ -1,17 +1,16 @@
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
-import Gst from 'gi://Gst';
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { ensureStorageFile, loadStations, STORAGE_PATH, initTranslations } from './radioUtils.js';
-import { createMetadataItem, updateMetadataDisplay } from './modules/metadataDisplay.js';
+import { createMetadataItem, updateMetadataDisplay, updatePlaybackStateIcon } from './modules/metadataDisplay.js';
 import { createVolumeItem, onVolumeChanged } from './modules/volumeControl.js';
 import { createScrollableSection, createStationMenuItem, refreshStationsMenu } from './modules/stationMenu.js';
-import { ensurePlayer, handleTagMessage, startMetadataUpdate, stopMetadataUpdate, playStation, updateStationHistory, updatePlaybackControl, togglePlayback, handleMediaPlayPause, handleMediaStop, stopPlayback } from './modules/playbackManager.js';
+import PlaybackManager from './modules/playbackManager.js';
 import { setupMediaKeys, cleanupMediaKeys } from './modules/mediaKeys.js';
 
 initTranslations(_);
@@ -24,19 +23,13 @@ const Indicator = GObject.registerClass(
             this._stations = stations ?? [];
             this._openPrefs = openPrefs;
             this._settings = settings;
-            this._player = null;
-            this._nowPlaying = null;
-            this._playbackState = 'stopped';
-            this._metadataTimer = null;
-            this._currentMetadata = {
-                title: null,
-                artist: null,
-                albumArt: null,
-                bitrate: null
-            };
-            this._bus = null;
-            this._busHandlerId = null;
-            this._pausedAt = null;
+
+            this._playbackManager = new PlaybackManager(this._settings, {
+                onStateChanged: (state) => this._onStateChanged(state),
+                onStationChanged: (station) => this._onStationChanged(station),
+                onMetadataUpdate: () => this._updateMetadataDisplay(),
+                onVisibilityChanged: (visible) => this._updateVisibility(visible)
+            });
 
             const iconPath = `${extensionPath}/icons/yetanotherradio.svg`;
             const iconFile = Gio.File.new_for_path(iconPath);
@@ -49,7 +42,10 @@ const Indicator = GObject.registerClass(
 
             this.menu.actor.add_style_class_name('yetanotherradio-menu');
 
-            this._metadataItem = createMetadataItem();
+            this._metadataItem = createMetadataItem(
+                () => this._togglePlayback(),
+                () => this._stopPlayback()
+            );
             this._metadataItem.visible = false;
             this.menu.addMenuItem(this._metadataItem);
 
@@ -57,11 +53,6 @@ const Indicator = GObject.registerClass(
             this._volumeItem._volumeSlider.connect('notify::value', () => this._onVolumeChanged());
             this._volumeItem.visible = false;
             this.menu.addMenuItem(this._volumeItem);
-
-            this._playbackControlItem = new PopupMenu.PopupMenuItem(_('Pause'));
-            this._playbackControlItem.connect('activate', () => this._togglePlayback());
-            this._playbackControlItem.visible = false;
-            this.menu.addMenuItem(this._playbackControlItem);
 
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
@@ -93,12 +84,32 @@ const Indicator = GObject.registerClass(
             this._refreshStationsMenu();
         }
 
+        _onStateChanged(state) {
+            updatePlaybackStateIcon(this._metadataItem, state);
+        }
+
+        _onStationChanged(station) {
+            this._refreshStationsMenu();
+        }
+
+        _updateVisibility(visible) {
+            const showMetadata = this._settings?.get_boolean('show-metadata') ?? true;
+            this._metadataItem.visible = visible && showMetadata;
+            this._volumeItem.visible = visible;
+        }
+
         _onVolumeChanged() {
-            onVolumeChanged(this._volumeItem._volumeSlider, this._player, this._volumeItem._volumeIcon, this._settings);
+            onVolumeChanged(this._volumeItem._volumeSlider, this._volumeItem._volumeIcon, this._settings);
+            this._playbackManager.setVolume(this._volumeItem._volumeSlider.value);
         }
 
         _updateMetadataDisplay() {
-            updateMetadataDisplay(this._settings, this._metadataItem, this._player, this._nowPlaying, this._currentMetadata);
+            updateMetadataDisplay(
+                this._settings,
+                this._metadataItem,
+                this._playbackManager.nowPlaying,
+                this._playbackManager.currentMetadata
+            );
         }
 
         setStations(stations) {
@@ -113,7 +124,8 @@ const Indicator = GObject.registerClass(
                 this._stationSection,
                 this._scrollableSection,
                 this._hintItem,
-                (station) => this._createStationMenuItem(station)
+                (station, isNowPlaying) => this._createStationMenuItem(station, isNowPlaying),
+                this._playbackManager.nowPlaying
             );
 
             const favorites = this._stations.filter(s => s.favorite);
@@ -130,136 +142,35 @@ const Indicator = GObject.registerClass(
             }
         }
 
-        _createStationMenuItem(station) {
-            return createStationMenuItem(station, (s) => this._playStation(s));
-        }
-
-        _ensurePlayer() {
-            const { player, bus, busHandlerId } = ensurePlayer(
-                this._player,
-                this._settings,
-                this._currentMetadata,
-                this._bus,
-                this._busHandlerId,
-                (message, currentMetadata) => this._handleTagMessage(message),
-                () => this._stopPlayback(),
-                (station) => this._playStation(station)
-            );
-            this._player = player;
-            this._bus = bus;
-            this._busHandlerId = busHandlerId;
-        }
-
-        _handleTagMessage(message) {
-            handleTagMessage(message, this._currentMetadata);
-        }
-
-        _startMetadataUpdate() {
-            this._metadataTimer = startMetadataUpdate(
-                this._settings,
-                this._metadataTimer,
-                () => this._updateMetadataDisplay()
-            );
-        }
-
-        _stopMetadataUpdate() {
-            this._metadataTimer = stopMetadataUpdate(this._metadataTimer);
+        _createStationMenuItem(station, isNowPlaying = false) {
+            return createStationMenuItem(station, (s) => this._playStation(s), isNowPlaying);
         }
 
         _playStation(station) {
-            this._ensurePlayer();
-            const result = playStation(
-                station,
-                this._player,
-                this._settings,
-                this._currentMetadata,
-                this._metadataItem,
-                this._volumeItem,
-                this._playbackControlItem,
-                () => this._startMetadataUpdate(),
-                (s) => this._updateStationHistory(s),
-                (state) => this._updatePlaybackControl(state),
-                () => this._refreshStationsMenu()
-            );
-            this._nowPlaying = result.nowPlaying;
-            this._playbackState = result.playbackState;
-        }
-
-        _updateStationHistory(station) {
-            updateStationHistory(station);
-        }
-
-        _updatePlaybackControl(state) {
-            updatePlaybackControl(state || this._playbackState, this._playbackControlItem);
+            this._playbackManager.play(station);
         }
 
         _togglePlayback() {
-            const result = togglePlayback(
-                this._player,
-                this._playbackState,
-                this._pausedAt,
-                this._nowPlaying,
-                (station) => this._playStation(station),
-                (state) => this._updatePlaybackControl(state)
-            );
-            this._playbackState = result.playbackState;
-            this._pausedAt = result.pausedAt;
-        }
-
-        handleMediaPlayPause() {
-            handleMediaPlayPause(this._playbackState, () => this._togglePlayback());
-        }
-
-        handleMediaStop() {
-            handleMediaStop(this._playbackState, () => this._stopPlayback());
+            this._playbackManager.toggle();
         }
 
         _stopPlayback() {
-            const result = stopPlayback(
-                this._player,
-                this._nowPlaying,
-                this._playbackState,
-                this._pausedAt,
-                this._playbackControlItem,
-                this._volumeItem,
-                this._metadataItem,
-                () => this._stopMetadataUpdate(),
-                this._currentMetadata,
-                () => this._refreshStationsMenu()
-            );
-            this._nowPlaying = result.nowPlaying;
-            this._playbackState = result.playbackState;
-            this._pausedAt = result.pausedAt;
+            this._playbackManager.stop();
+        }
+
+        handleMediaPlayPause() {
+            this._togglePlayback();
+        }
+
+        handleMediaStop() {
+            this._stopPlayback();
         }
 
         destroy() {
-            if (this._playbackState !== 'stopped') {
-                this._stopPlayback();
-            }
-
-            this._stopMetadataUpdate();
-
-            if (this._bus) {
-                if (this._busHandlerId) {
-                    this._bus.disconnect(this._busHandlerId);
-                    this._busHandlerId = null;
-                }
-                this._bus.remove_signal_watch();
-                this._bus = null;
-            }
-
-            if (this._player) {
-                try {
-                    this._player.set_state(Gst.State.NULL);
-                } catch (e) {
-                    console.debug(e);
-                }
-                this._player = null;
-            }
+            this._playbackManager.destroy();
 
             this._metadataItem = null;
             this._volumeItem = null;
-            this._playbackControlItem = null;
             this._favoritesSection = null;
             this._stationSection = null;
             this._scrollableSection = null;

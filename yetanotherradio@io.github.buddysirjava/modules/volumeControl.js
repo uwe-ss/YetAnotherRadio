@@ -1,5 +1,4 @@
 import St from 'gi://St';
-import GstAudio from 'gi://GstAudio';
 import Clutter from 'gi://Clutter';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Slider from 'resource:///org/gnome/shell/ui/slider.js';
@@ -28,12 +27,8 @@ export function createVolumeItem(settings) {
     return item;
 }
 
-export function onVolumeChanged(volumeSlider, player, volumeIcon, settings) {
+export function onVolumeChanged(volumeSlider, volumeIcon, settings) {
     const volume = volumeSlider.value;
-
-    if (player) {
-        player.set_volume(GstAudio.StreamVolumeFormat.CUBIC, volume);
-    }
 
     let iconName;
     if (volume <= 0) {
@@ -49,9 +44,3 @@ export function onVolumeChanged(volumeSlider, player, volumeIcon, settings) {
 
     settings.set_int('volume', Math.round(volume * 100));
 }
-
-
-
-
-
-

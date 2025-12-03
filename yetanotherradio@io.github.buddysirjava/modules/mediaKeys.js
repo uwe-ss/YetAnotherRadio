@@ -56,7 +56,6 @@ export function cleanupMediaKeys(mediaKeyAccelerators, acceleratorHandlerId, med
                 console.debug(e);
             }
         });
-        mediaKeyAccelerators = [];
     }
 
     if (mediaKeysSettingsHandlerId) {
@@ -64,5 +63,5 @@ export function cleanupMediaKeys(mediaKeyAccelerators, acceleratorHandlerId, med
         mediaKeysSettingsHandlerId = null;
     }
 
-    return { mediaKeyAccelerators, acceleratorHandlerId, mediaKeysSettingsHandlerId };
+    return { mediaKeyAccelerators: [], acceleratorHandlerId, mediaKeysSettingsHandlerId };
 }
