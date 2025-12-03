@@ -32,8 +32,6 @@ export default class PlaybackManager {
             nowPlaying: null,
             playbackState: 'stopped'
         };
-
-        this._initGst();
     }
 
     _initGst() {
@@ -56,6 +54,8 @@ export default class PlaybackManager {
 
     _ensurePlayer() {
         if (this._player) return;
+
+        this._initGst();
 
         this._player = Gst.ElementFactory.make('playbin', 'radio-player');
         if (!this._player) {

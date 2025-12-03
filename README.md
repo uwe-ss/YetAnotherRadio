@@ -6,11 +6,10 @@ A GNOME Shell extension for listening to internet radio stations directly from y
 This extension uses [Radio Browser](https://www.radio-browser.info/)'s API to fetch radio urls and play them using gstreamer (Usually being installed with GNOME).
 
 ## Screenshots
-
+<img src="assets/GeneralMenu.png" width="400" alt="General Menu">
 <img src="assets/menu.png" width="400" alt="Menu">
 <img src="assets/StationList.png" width="400" alt="Station List">
 <img src="assets/AddingStation.png" width="400" alt="Adding Station">
-<img src="assets/Backup.png" width="400" alt="Backup">
 
 ## Features
 
