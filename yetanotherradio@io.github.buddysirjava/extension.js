@@ -13,8 +13,6 @@ import { createScrollableSection, createStationMenuItem, refreshStationsMenu } f
 import PlaybackManager from './modules/playbackManager.js';
 import { setupMediaKeys, cleanupMediaKeys } from './modules/mediaKeys.js';
 
-initTranslations(_);
-
 const Indicator = GObject.registerClass(
     class Indicator extends PanelMenu.Button {
         _init(stations, openPrefs, extensionPath, settings) {
@@ -183,6 +181,7 @@ const Indicator = GObject.registerClass(
 
 export default class YetAnotherRadioExtension extends Extension {
     enable() {
+        initTranslations(_);
         ensureStorageFile();
         const stations = loadStations();
 
