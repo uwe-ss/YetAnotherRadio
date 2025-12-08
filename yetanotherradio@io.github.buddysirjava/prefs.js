@@ -907,8 +907,6 @@ export default class YetAnotherRadioPreferences extends ExtensionPreferences {
         window.set_default_size(720, 640);
 
         const settings = this.getSettings();
-        const stations = loadStations();
-
         const toastOverlay = new Adw.ToastOverlay();
         const viewStack = new Adw.ViewStack();
 
@@ -917,10 +915,15 @@ export default class YetAnotherRadioPreferences extends ExtensionPreferences {
             addStationsPage.setStations(newStations);
             generalSettingsPage.setStations(newStations);
         };
-
-        const generalSettingsPage = new GeneralSettingsPage(settings, stations, refreshCallback, toastOverlay);
-        const savedStationsPage = new SavedStationsPage(stations, refreshCallback);
-        const addStationsPage = new AddStationsPage(stations, refreshCallback, settings);
+        
+        const generalSettingsPage = new GeneralSettingsPage(settings, [], refreshCallback, toastOverlay);
+        const savedStationsPage = new SavedStationsPage([], refreshCallback);
+        const addStationsPage = new AddStationsPage([], refreshCallback, settings);
+        loadStations().then(stations => {
+            refreshCallback(stations);
+        }).catch(error => {
+            console.error('Failed to load stations in prefs:', error);
+        });
 
         viewStack.add_titled(generalSettingsPage, 'general', _('General'));
         viewStack.add_titled(savedStationsPage, 'saved', _('Saved Stations'));

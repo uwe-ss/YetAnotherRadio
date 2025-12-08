@@ -183,15 +183,19 @@ export default class YetAnotherRadioExtension extends Extension {
     enable() {
         initTranslations(_);
         ensureStorageFile();
-        const stations = loadStations();
-
         this._settings = this.getSettings();
-
-        this._indicator = new Indicator(stations, () => this.openPreferences(), this.path, this._settings);
+        this._indicator = new Indicator([], () => this.openPreferences(), this.path, this._settings);
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
-        this._monitor = this._watchStationsFile();
+        loadStations().then(stations => {
+            if (this._indicator) {
+                this._indicator.setStations(stations);
+            }
+        }).catch(error => {
+            console.error('Failed to load stations:', error);
+        });
 
+        this._monitor = this._watchStationsFile();
         this._setupMediaKeys();
     }
 
@@ -199,7 +203,11 @@ export default class YetAnotherRadioExtension extends Extension {
         const file = Gio.File.new_for_path(STORAGE_PATH);
         const monitor = file.monitor_file(Gio.FileMonitorFlags.NONE, null);
         this._monitorHandlerId = monitor.connect('changed', () => {
-            this._indicator?.setStations(loadStations());
+            loadStations().then(stations => {
+                this._indicator?.setStations(stations);
+            }).catch(error => {
+                console.error('Failed to reload stations:', error);
+            });
         });
         return monitor;
     }

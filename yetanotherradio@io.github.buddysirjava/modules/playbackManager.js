@@ -250,16 +250,24 @@ export default class PlaybackManager {
     }
 
     _updateStationHistory(station) {
-        const stations = loadStations();
-        const stationIndex = stations.findIndex(s => s.uuid === station.uuid);
-        if (stationIndex >= 0) {
-            stations[stationIndex].lastPlayed = Date.now();
-            saveStations(stations);
-        }
+        loadStations().then(stations => {
+            const stationIndex = stations.findIndex(s => s.uuid === station.uuid);
+            if (stationIndex >= 0) {
+                stations[stationIndex].lastPlayed = Date.now();
+                saveStations(stations);
+            }
+        }).catch(err => {
+            console.error('Failed to update station history', err);
+        });
     }
 
     destroy() {
         this.stop();
+
+        if (this._metadataTimer) {
+            GLib.source_remove(this._metadataTimer);
+            this._metadataTimer = null;
+        }
 
         if (this._reconnectId) {
             GLib.source_remove(this._reconnectId);

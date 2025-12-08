@@ -1,4 +1,5 @@
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import Soup from 'gi://Soup';
 
 let _ = (s) => s;
@@ -30,7 +31,7 @@ export function ensureStorageFile() {
     }
 }
 
-export function loadStations() {
+export async function loadStations() {
     try {
         ensureStorageFile();
     } catch (error) {
@@ -39,7 +40,20 @@ export function loadStations() {
     }
 
     try {
-        const [, contents] = GLib.file_get_contents(STORAGE_PATH);
+        const file = Gio.File.new_for_path(STORAGE_PATH);
+        const [success, contents] = await new Promise((resolve, reject) => {
+            file.load_contents_async(null, (obj, res) => {
+                try {
+                    const result = obj.load_contents_finish(res);
+                    resolve(result);
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        });
+
+        if (!success) return [];
+
         const text = new TextDecoder().decode(contents);
         const parsed = JSON.parse(text);
         if (!Array.isArray(parsed))
@@ -49,7 +63,7 @@ export function loadStations() {
             .map(_sanitizeStation);
     } catch (error) {
         console.error('Failed to load stations', error);
-        if (error.code === GLib.IOErrorEnum.NOT_FOUND) {
+        if (error.code === Gio.IOErrorEnum.NOT_FOUND || error.code === GLib.IOErrorEnum.NOT_FOUND) {
             console.warn('Stations file not found, returning empty list');
             return [];
         }
