@@ -60,7 +60,7 @@ export function createMetadataItem(playPauseCallback, stopCallback) {
     bottomRow.add_child(qualityLabel);
 
     const controlsBox = new St.BoxLayout({
-        style_class: 'metadata-controls-pill',
+        style_class: 'button metadata-controls-pill',
         vertical: false,
         x_align: Clutter.ActorAlign.END,
         y_align: Clutter.ActorAlign.CENTER,
@@ -76,7 +76,7 @@ export function createMetadataItem(playPauseCallback, stopCallback) {
     });
 
     const playPauseBtn = new St.Button({
-        style_class: 'metadata-overlay-button',
+        style_class: 'icon-button metadata-overlay-button',
         child: new St.Icon({
             icon_name: 'media-playback-pause-symbolic',
             style_class: 'metadata-overlay-icon'
@@ -86,7 +86,7 @@ export function createMetadataItem(playPauseCallback, stopCallback) {
     controlsBox.add_child(playPauseBtn);
 
     const stopBtn = new St.Button({
-        style_class: 'metadata-overlay-button',
+        style_class: 'icon-button metadata-overlay-button',
         child: new St.Icon({
             icon_name: 'media-playback-stop-symbolic',
             style_class: 'metadata-overlay-icon'
@@ -330,4 +330,3 @@ export function loadStationIcon(item, faviconUrl) {
         console.debug(e);
     }
 }
-

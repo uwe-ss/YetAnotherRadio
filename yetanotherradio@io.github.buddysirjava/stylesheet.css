@@ -1,4 +1,4 @@
-.metadata-item-box {    
+.metadata-item-box {
     spacing: 12px;
     padding: 8px;
 }
@@ -23,7 +23,6 @@
 
 .metadata-artist {
     font-size: 0.9em;
-    color: rgba(255, 255, 255, 0.7);
     max-width: 180px !important;
     width: 180px !important;
 }
@@ -35,7 +34,6 @@
 
 .metadata-quality {
     font-size: 0.85em;
-    color: rgba(255, 255, 255, 0.5);
 }
 
 preferencespage preferencesgroup button {
@@ -127,7 +125,6 @@ preferencespage preferencesgroup actionrow:hover {
 }
 
 .metadata-controls-pill {
-    background-color: rgba(255, 255, 255, 0.1);
     border-radius: 24px;
     padding: 2px;
 }
@@ -151,5 +148,4 @@ preferencespage preferencesgroup actionrow:hover {
 
 .metadata-overlay-icon {
     icon-size: 16px;
-    color: white;
 }
