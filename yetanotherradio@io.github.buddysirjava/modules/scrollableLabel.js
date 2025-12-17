@@ -16,6 +16,7 @@ export default class ScrollableLabel {
         this._label.style = 'text-align: left; width: 15em;';
         this._label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
         this._label.clutter_text.line_wrap = false;
+        this._label.clutter_text.use_markup = false;
 
         if (!this._hoverActor.reactive) {
             this._hoverActor.reactive = true;

@@ -240,8 +240,7 @@ export function queryPlayerTags(player, currentMetadata) {
 }
 
 export function updateMetadataDisplay(settings, metadataItem, nowPlaying, currentMetadata) {
-    const showMetadata = settings?.get_boolean('show-metadata') ?? true;
-    if (!showMetadata || !metadataItem.visible)
+    if (!metadataItem.visible)
         return;
 
     let title = currentMetadata.title || _('Unknown title');

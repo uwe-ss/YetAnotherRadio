@@ -91,8 +91,7 @@ const Indicator = GObject.registerClass(
         }
 
         _updateVisibility(visible) {
-            const showMetadata = this._settings?.get_boolean('show-metadata') ?? true;
-            this._metadataItem.visible = visible && showMetadata;
+            this._metadataItem.visible = visible;
             this._volumeItem.visible = visible;
         }
 

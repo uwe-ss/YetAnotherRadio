@@ -120,7 +120,7 @@ export default class PlaybackManager {
                     return false;
                 });
             } else {
-                Main.notifyError(_('Playback error'), errorBody);
+                Main.notifyError(_('Playback error'), GLib.markup_escape_text(errorBody, -1));
                 this.stop();
             }
 
@@ -160,11 +160,14 @@ export default class PlaybackManager {
 
             this._startMetadataUpdate();
 
-            Main.notify(_('Playing %s').format(stationDisplayName(station)));
+            const displayName = stationDisplayName(station);
+            const escapedName = GLib.markup_escape_text(displayName, -1);
+            Main.notify(_('Playing %s').format(escapedName), '');
 
         } catch (error) {
             console.error(error, 'Failed to start playback');
-            Main.notifyError(_('Playback error'), String(error));
+            const errorMsg = String(error);
+            Main.notifyError(_('Playback error'), GLib.markup_escape_text(errorMsg, -1));
             this.stop();
         }
     }

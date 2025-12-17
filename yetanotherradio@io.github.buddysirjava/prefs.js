@@ -26,6 +26,7 @@ const SavedStationsPage = GObject.registerClass(
         _init(stations, refreshCallback) {
             super._init({
                 title: _('Saved Stations'),
+                icon_name: 'view-list-symbolic',
             });
 
             this._stations = stations;
@@ -73,8 +74,8 @@ const SavedStationsPage = GObject.registerClass(
                 const displayName = stationDisplayName(station);
                 const truncatedName = truncateString(displayName);
                 const row = new Adw.ActionRow({
-                    title: truncatedName,
-                    subtitle: truncateString(station.url || ''),
+                    title: GLib.markup_escape_text(truncatedName, -1),
+                    subtitle: GLib.markup_escape_text(truncateString(station.url || ''), -1),
                 });
 
                 const dragHandle = new Gtk.Image({
@@ -167,12 +168,12 @@ const SavedStationsPage = GObject.registerClass(
             if (!station)
                 return;
 
-            const dialog = new Adw.MessageDialog({
-                heading: _('Remove Station?'),
-                body: _('Are you sure you want to remove "%s"?').format(stationDisplayName(station)),
-                close_response: 'cancel',
-                modal: true,
-            });
+                const dialog = new Adw.MessageDialog({
+                    heading: _('Remove Station?'),
+                    body: _('Are you sure you want to remove "%s"?').format(GLib.markup_escape_text(stationDisplayName(station), -1)),
+                    close_response: 'cancel',
+                    modal: true,
+                });
 
             dialog.add_response('cancel', _('Cancel'));
             dialog.add_response('remove', _('Remove'));
@@ -282,6 +283,7 @@ const AddStationsPage = GObject.registerClass(
         _init(stations, refreshCallback, settings) {
             super._init({
                 title: _('Add Stations'),
+                icon_name: 'list-add-symbolic',
             });
 
             this._client = new RadioBrowserClient(settings);
@@ -459,8 +461,8 @@ const AddStationsPage = GObject.registerClass(
                 const isAlreadySaved = this._stations.some(saved => saved.uuid === station.stationuuid);
 
                 const row = new Adw.ActionRow({
-                    title: stationDisplayName(station),
-                    subtitle: station.url_resolved || station.url || station.homepage || '',
+                    title: GLib.markup_escape_text(stationDisplayName(station), -1),
+                    subtitle: GLib.markup_escape_text(station.url_resolved || station.url || station.homepage || '', -1),
                     activatable: !isAlreadySaved,
                 });
 
@@ -567,7 +569,7 @@ const AddStationsPage = GObject.registerClass(
             if (!isNewlyAdded) {
                 const dialog = new Adw.MessageDialog({
                     heading: _('Remove Station?'),
-                    body: _('Are you sure you want to remove "%s"?').format(stationDisplayName(savedStation)),
+                    body: _('Are you sure you want to remove "%s"?').format(GLib.markup_escape_text(stationDisplayName(savedStation), -1)),
                     close_response: 'cancel',
                     modal: true,
                 });
@@ -693,15 +695,16 @@ const AddStationsPage = GObject.registerClass(
 
 const GeneralSettingsPage = GObject.registerClass(
     class GeneralSettingsPage extends Adw.PreferencesPage {
-        _init(settings, stations, refreshCallback, toastOverlay) {
+        _init(settings, stations, refreshCallback, window) {
             super._init({
                 title: _('General'),
+                icon_name: 'preferences-system-symbolic',
             });
 
             this._settings = settings;
             this._stations = stations;
             this._refreshCallback = refreshCallback;
-            this._toastOverlay = toastOverlay;
+            this._window = window;
 
             const generalGroup = new Adw.PreferencesGroup({
                 title: _('General Settings'),
@@ -724,22 +727,6 @@ const GeneralSettingsPage = GObject.registerClass(
             });
             mediaKeysRow.add_suffix(mediaKeysSwitch);
             generalGroup.add(mediaKeysRow);
-
-            const showMetadataRow = new Adw.ActionRow({
-                title: _('Show Metadata'),
-                subtitle: _('Display track information (title, artist, album art) in the menu'),
-            });
-            showMetadataRow.set_activatable(false);
-
-            const showMetadataSwitch = new Gtk.Switch({
-                active: this._settings.get_boolean('show-metadata'),
-                valign: 3,
-            });
-            showMetadataSwitch.connect('notify::active', (sw) => {
-                this._settings.set_boolean('show-metadata', sw.active);
-            });
-            showMetadataRow.add_suffix(showMetadataSwitch);
-            generalGroup.add(showMetadataRow);
 
             const autoPlayRow = new Adw.ActionRow({
                 title: _('Auto-play Last Station'),
@@ -799,12 +786,12 @@ const GeneralSettingsPage = GObject.registerClass(
         }
 
         _showToast(title, timeout = 3) {
-            if (this._toastOverlay) {
+            if (this._window) {
                 const toast = new Adw.Toast({
                     title: title,
                     timeout: timeout,
                 });
-                this._toastOverlay.add_toast(toast);
+                this._window.add_toast(toast);
             }
         }
 
@@ -907,8 +894,6 @@ export default class YetAnotherRadioPreferences extends ExtensionPreferences {
         window.set_default_size(720, 640);
 
         const settings = this.getSettings();
-        const toastOverlay = new Adw.ToastOverlay();
-        const viewStack = new Adw.ViewStack();
 
         const refreshCallback = (newStations) => {
             savedStationsPage.setStations(newStations);
@@ -916,74 +901,20 @@ export default class YetAnotherRadioPreferences extends ExtensionPreferences {
             generalSettingsPage.setStations(newStations);
         };
         
-        const generalSettingsPage = new GeneralSettingsPage(settings, [], refreshCallback, toastOverlay);
+        const generalSettingsPage = new GeneralSettingsPage(settings, [], refreshCallback, window);
         const savedStationsPage = new SavedStationsPage([], refreshCallback);
         const addStationsPage = new AddStationsPage([], refreshCallback, settings);
+
         loadStations().then(stations => {
             refreshCallback(stations);
         }).catch(error => {
             console.error('Failed to load stations in prefs:', error);
+            refreshCallback([]);
         });
 
-        viewStack.add_titled(generalSettingsPage, 'general', _('General'));
-        viewStack.add_titled(savedStationsPage, 'saved', _('Saved Stations'));
-        viewStack.add_titled(addStationsPage, 'add', _('Add Stations'));
-
-        toastOverlay.set_child(viewStack);
-
-        const tabBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 0,
-            css_classes: ['linked'],
-        });
-
-        const generalButton = new Gtk.ToggleButton({
-            label: _('General'),
-            active: true,
-        });
-        const savedButton = new Gtk.ToggleButton({
-            label: _('Saved Stations'),
-        });
-        const addButton = new Gtk.ToggleButton({
-            label: _('Add Stations'),
-        });
-
-        generalButton.connect('toggled', (btn) => {
-            if (btn.active) {
-                viewStack.set_visible_child_name('general');
-                savedButton.set_active(false);
-                addButton.set_active(false);
-            }
-        });
-        tabBox.append(generalButton);
-
-        savedButton.connect('toggled', (btn) => {
-            if (btn.active) {
-                viewStack.set_visible_child_name('saved');
-                generalButton.set_active(false);
-                addButton.set_active(false);
-            }
-        });
-        tabBox.append(savedButton);
-
-        addButton.connect('toggled', (btn) => {
-            if (btn.active) {
-                viewStack.set_visible_child_name('add');
-                generalButton.set_active(false);
-                savedButton.set_active(false);
-            }
-        });
-        tabBox.append(addButton);
-
-        const toolbarView = new Adw.ToolbarView();
-
-        const headerBar = new Adw.HeaderBar();
-        headerBar.set_title_widget(tabBox);
-        toolbarView.add_top_bar(headerBar);
-
-        toolbarView.set_content(toastOverlay);
-
-        window.set_content(toolbarView);
+        window.add(generalSettingsPage);
+        window.add(savedStationsPage);
+        window.add(addStationsPage);
 
         window.connect('close-request', () => {
             addStationsPage.destroy();

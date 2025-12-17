@@ -22,12 +22,6 @@
       <range min="5" max="100"/>
     </key>
     
-    <key name="show-metadata" type="b">
-      <default>true</default>
-      <summary>Show metadata</summary>
-      <description>Show track metadata (title, artist, album art) in the menu</description>
-    </key>
-    
     <key name="auto-play-last-station" type="b">
       <default>false</default>
       <summary>Auto-play last station</summary>
