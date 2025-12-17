@@ -69,10 +69,10 @@ export function createMetadataItem(playPauseCallback, stopCallback) {
     });
 
     controlsBox.connect('enter-event', () => {
-        return Clutter.EVENT_STOP;
+        return Clutter.EVENT_PROPAGATE;
     });
     controlsBox.connect('leave-event', () => {
-        return Clutter.EVENT_STOP;
+        return Clutter.EVENT_PROPAGATE;
     });
 
     const playPauseBtn = new St.Button({

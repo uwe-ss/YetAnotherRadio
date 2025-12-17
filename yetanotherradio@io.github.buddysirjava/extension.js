@@ -1,6 +1,7 @@
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -21,17 +22,18 @@ const Indicator = GObject.registerClass(
             this._stations = stations ?? [];
             this._openPrefs = openPrefs;
             this._settings = settings;
+            this._refreshIdleId = 0;
+
+            const iconPath = `${extensionPath}/icons/yetanotherradio.svg`;
+            const iconFile = Gio.File.new_for_path(iconPath);
+            const icon = new Gio.FileIcon({ file: iconFile });
 
             this._playbackManager = new PlaybackManager(this._settings, {
                 onStateChanged: (state) => this._onStateChanged(state),
                 onStationChanged: (station) => this._onStationChanged(station),
                 onMetadataUpdate: () => this._updateMetadataDisplay(),
                 onVisibilityChanged: (visible) => this._updateVisibility(visible)
-            });
-
-            const iconPath = `${extensionPath}/icons/yetanotherradio.svg`;
-            const iconFile = Gio.File.new_for_path(iconPath);
-            const icon = new Gio.FileIcon({ file: iconFile });
+            }, icon);
 
             this.add_child(new St.Icon({
                 gicon: icon,
@@ -87,7 +89,18 @@ const Indicator = GObject.registerClass(
         }
 
         _onStationChanged(station) {
-            this._refreshStationsMenu();
+            if (this._refreshIdleId)
+                return;
+
+            this._refreshIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this._refreshIdleId = 0;
+
+                if (!this._stationSection || !this.menu)
+                    return GLib.SOURCE_REMOVE;
+
+                this._refreshStationsMenu();
+                return GLib.SOURCE_REMOVE;
+            });
         }
 
         _updateVisibility(visible) {
@@ -166,6 +179,11 @@ const Indicator = GObject.registerClass(
         destroy() {
             this._playbackManager.destroy();
 
+            if (this._refreshIdleId) {
+                GLib.source_remove(this._refreshIdleId);
+                this._refreshIdleId = 0;
+            }
+
             this._metadataItem = null;
             this._volumeItem = null;
             this._favoritesSection = null;
@@ -216,10 +234,6 @@ export default class YetAnotherRadioExtension extends Extension {
         this._mediaKeyAccelerators = mediaKeyAccelerators;
         this._acceleratorHandlerId = acceleratorHandlerId;
         this._mediaKeysSettingsHandlerId = mediaKeysSettingsHandlerId;
-
-        if (this._mediaKeysSettingsHandlerId) {
-            this._settings?.disconnect(this._mediaKeysSettingsHandlerId);
-        }
         this._mediaKeysSettingsHandlerId = this._settings?.connect('changed::enable-media-keys', () => {
             this._cleanupMediaKeys();
             this._setupMediaKeys();

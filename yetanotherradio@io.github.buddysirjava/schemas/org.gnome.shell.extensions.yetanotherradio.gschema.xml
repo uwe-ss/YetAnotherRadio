@@ -34,6 +34,12 @@
       <description>Enable global keyboard media keys (Play/Pause, Stop) to control playback</description>
     </key>
     
+    <key name="show-playing-notification" type="b">
+      <default>true</default>
+      <summary>Show playing notification</summary>
+      <description>Show an on-screen notification when starting radio playback</description>
+    </key>
+    
     <key name="volume" type="i">
       <default>100</default>
       <summary>Volume</summary>

@@ -35,15 +35,17 @@ export default class ScrollableLabel {
     }
 
     setText(text) {
+        if (!this._label)
+            return;
         const newText = text || '';
         if (this._originalText === newText) {
             return;
         }
 
         this._originalText = newText;
-        
+
         const originalChars = [...this._originalText];
-        
+
         if (originalChars.length <= this._maxLength) {
             this._stopAnimation();
             this._updateDisplay();
@@ -52,13 +54,13 @@ export default class ScrollableLabel {
 
         const separator = '   ';
         const separatorChars = [...separator];
-        
+
         this._loopThreshold = originalChars.length + separatorChars.length;
 
         this._loopChars = [...originalChars, ...separatorChars, ...originalChars];
 
         const minLength = this._loopThreshold + this._maxLength;
-        
+
         while (this._loopChars.length < minLength) {
             this._loopChars.push(...separatorChars, ...originalChars);
         }
@@ -72,10 +74,17 @@ export default class ScrollableLabel {
     }
 
     _startAnimation() {
+        if (!this._label)
+            return;
+
         if ([...this._originalText].length <= this._maxLength) return;
         if (this._timeoutId) return;
 
         this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+            if (!this._label || !this._label.clutter_text) {
+                this.destroy();
+                return GLib.SOURCE_REMOVE;
+            }
             this._scrollIndex++;
             if (this._scrollIndex >= this._loopThreshold) {
                 this._scrollIndex = 0;
@@ -95,6 +104,10 @@ export default class ScrollableLabel {
     }
 
     _updateDisplay() {
+        if (!this._label || !this._label.clutter_text) {
+            return;
+        }
+
         if (!this._originalText) {
             this._label.text = '';
             return;
@@ -119,8 +132,16 @@ export default class ScrollableLabel {
     destroy() {
         this._stopAnimation();
         if (this._hoverActor) {
-            if (this._enterId) this._hoverActor.disconnect(this._enterId);
-            if (this._leaveId) this._hoverActor.disconnect(this._leaveId);
+            if (this._enterId) {
+                this._hoverActor.disconnect(this._enterId);
+                this._enterId = null;
+            }
+            if (this._leaveId) {
+                this._hoverActor.disconnect(this._leaveId);
+                this._leaveId = null;
+            }
         }
+        this._label = null;
+        this._hoverActor = null;
     }
 }

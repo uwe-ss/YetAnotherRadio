@@ -1,17 +1,22 @@
 import Gst from 'gi://Gst';
 import GstAudio from 'gi://GstAudio';
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 
+import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { loadStations, saveStations, stationDisplayName } from '../radioUtils.js';
 import { parseMetadataTags, queryPlayerTags } from './metadataDisplay.js';
 
+const ShellVersion = parseFloat(Config.PACKAGE_VERSION);
+
 export default class PlaybackManager {
-    constructor(settings, callbacks) {
+    constructor(settings, callbacks, osdIcon = null) {
         this._settings = settings;
         this._callbacks = callbacks || {};
+        this._osdIcon = osdIcon;
 
         this._player = null;
         this._bus = null;
@@ -159,10 +164,8 @@ export default class PlaybackManager {
             if (this._callbacks.onVisibilityChanged) this._callbacks.onVisibilityChanged(true);
 
             this._startMetadataUpdate();
-
-            const displayName = stationDisplayName(station);
-            const escapedName = GLib.markup_escape_text(displayName, -1);
-            Main.notify(_('Playing %s').format(escapedName), '');
+            
+            this._showPlayingNotification(station);
 
         } catch (error) {
             console.error(error, 'Failed to start playback');
@@ -170,6 +173,33 @@ export default class PlaybackManager {
             Main.notifyError(_('Playback error'), GLib.markup_escape_text(errorMsg, -1));
             this.stop();
         }
+    }
+
+    _showPlayingNotification(station) {
+        if (!this._settings?.get_boolean('show-playing-notification'))
+            return;
+
+        const displayName = stationDisplayName(station);
+        const escapedName = GLib.markup_escape_text(displayName, -1);
+        const message = _('Playing %s').format(escapedName);
+
+        // Use an OSD-style notification similar to Caffeine, falling back to a normal notification.
+        const icon = this._osdIcon || Gio.ThemedIcon.new('media-playback-start-symbolic');
+
+        if (Main.osdWindowManager) {
+            if (ShellVersion >= 49 && typeof Main.osdWindowManager.showAll === 'function') {
+                Main.osdWindowManager.showAll(icon, message, null, null);
+                return;
+            }
+
+            if (typeof Main.osdWindowManager.show === 'function') {
+                Main.osdWindowManager.show(-1, icon, message, null, null);
+                return;
+            }
+        }
+
+        // Fallback: regular shell notification if OSD is unavailable.
+        Main.notify(message, '');
     }
 
     toggle() {

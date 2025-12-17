@@ -728,6 +728,22 @@ const GeneralSettingsPage = GObject.registerClass(
             mediaKeysRow.add_suffix(mediaKeysSwitch);
             generalGroup.add(mediaKeysRow);
 
+            const playingNotificationRow = new Adw.ActionRow({
+                title: _('Show Playing Notification'),
+                subtitle: _('Show an on-screen notification when starting playback'),
+            });
+            playingNotificationRow.set_activatable(false);
+
+            const playingNotificationSwitch = new Gtk.Switch({
+                active: this._settings.get_boolean('show-playing-notification'),
+                valign: 3,
+            });
+            playingNotificationSwitch.connect('notify::active', (sw) => {
+                this._settings.set_boolean('show-playing-notification', sw.active);
+            });
+            playingNotificationRow.add_suffix(playingNotificationSwitch);
+            generalGroup.add(playingNotificationRow);
+
             const autoPlayRow = new Adw.ActionRow({
                 title: _('Auto-play Last Station'),
                 subtitle: _('Automatically play the last played station when extension is enabled'),
