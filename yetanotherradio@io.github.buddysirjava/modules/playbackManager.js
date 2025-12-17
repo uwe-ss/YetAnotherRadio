@@ -183,7 +183,6 @@ export default class PlaybackManager {
         const escapedName = GLib.markup_escape_text(displayName, -1);
         const message = _('Playing %s').format(escapedName);
 
-        // Use an OSD-style notification similar to Caffeine, falling back to a normal notification.
         const icon = this._osdIcon || Gio.ThemedIcon.new('media-playback-start-symbolic');
 
         if (Main.osdWindowManager) {
@@ -198,7 +197,6 @@ export default class PlaybackManager {
             }
         }
 
-        // Fallback: regular shell notification if OSD is unavailable.
         Main.notify(message, '');
     }
 
