@@ -204,16 +204,27 @@ export class RadioBrowserClient {
         if (this._servers?.length)
             return;
 
-        const payload = await this._fetchJson('https://all.api.radio-browser.info/json/servers');
-        const hosts = payload
-            .map(server => server?.name)
-            .filter(Boolean)
-            .map(name => `https://${name}`);
+        try {
+            const payload = await this._fetchJson('https://all.api.radio-browser.info/json/servers');
+            const hosts = payload
+                .map(server => server?.name)
+                .filter(Boolean)
+                .map(name => `https://${name}`);
 
-        if (!hosts.length)
-            throw new Error(_('Radio Browser server list is empty.'));
+            if (hosts.length > 0) {
+                this._servers = hosts;
+                return;
+            }
+        } catch (e) {
+            console.warn('Failed to fetch servers from radio-browser.info, using fallbacks', e);
+        }
 
-        this._servers = hosts;
+        this._servers = [
+            'https://de1.api.radio-browser.info',
+            'https://fr1.api.radio-browser.info',
+            'https://at1.api.radio-browser.info',
+            'https://nl1.api.radio-browser.info'
+        ];
     }
 
     async _fetchJson(url) {

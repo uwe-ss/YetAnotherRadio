@@ -69,10 +69,10 @@ export function createMetadataItem(playPauseCallback, stopCallback) {
     });
 
     controlsBox.connect('enter-event', () => {
-        return Clutter.EVENT_STOP;
+        return Clutter.EVENT_PROPAGATE;
     });
     controlsBox.connect('leave-event', () => {
-        return Clutter.EVENT_STOP;
+        return Clutter.EVENT_PROPAGATE;
     });
 
     const playPauseBtn = new St.Button({
@@ -240,8 +240,7 @@ export function queryPlayerTags(player, currentMetadata) {
 }
 
 export function updateMetadataDisplay(settings, metadataItem, nowPlaying, currentMetadata) {
-    const showMetadata = settings?.get_boolean('show-metadata') ?? true;
-    if (!showMetadata || !metadataItem.visible)
+    if (!metadataItem.visible)
         return;
 
     let title = currentMetadata.title || _('Unknown title');

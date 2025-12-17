@@ -1,10 +1,11 @@
+import GLib from 'gi://GLib';
 import St from 'gi://St';
+import Gio from 'gi://Gio';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import ScrollableLabel from './scrollableLabel.js';
 import { stationDisplayName } from '../radioUtils.js';
-import { loadStationIcon } from './metadataDisplay.js';
 
 export function createScrollableSection() {
     if (PopupMenu.PopupMenuScrollSection) {
@@ -39,7 +40,8 @@ export function createScrollableSection() {
 
 export function createStationMenuItem(station, playStationCallback, isNowPlaying = false) {
     const stationName = stationDisplayName(station);
-    const item = new PopupMenu.PopupMenuItem(stationName);
+    const escapedName = GLib.markup_escape_text(stationName, -1);
+    const item = new PopupMenu.PopupMenuItem(escapedName);
     item.connect('activate', () => {
         playStationCallback(station);
     });
@@ -48,8 +50,33 @@ export function createStationMenuItem(station, playStationCallback, isNowPlaying
     scrollable.setText(stationName);
     item._scrollable = scrollable;
 
+    const iconWidget = new St.Icon({
+        icon_name: 'audio-x-generic-symbolic',
+        icon_size: 16,
+        style_class: 'system-status-icon'
+    });
+    item.insert_child_at_index(iconWidget, 0);
+
     if (station.favicon) {
-        loadStationIcon(item, station.favicon);
+        if (station.favicon.startsWith('file://')) {
+            const path = station.favicon.replace('file://', '');
+            if (!GLib.file_test(path, GLib.FileTest.EXISTS)) {
+                return item;
+            }
+        } else if (station.favicon.startsWith('/')) {
+            if (!GLib.file_test(station.favicon, GLib.FileTest.EXISTS)) {
+                return item;
+            }
+        }
+
+        try {
+            const file = Gio.File.new_for_uri(station.favicon);
+            const icon = new Gio.FileIcon({ file: file });
+            iconWidget.gicon = icon;
+            iconWidget.icon_name = null;
+        } catch (e) {
+            console.debug(e);
+        }
     }
 
     if (isNowPlaying) {
