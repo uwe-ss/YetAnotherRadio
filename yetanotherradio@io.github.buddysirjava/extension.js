@@ -12,7 +12,6 @@ import { createMetadataItem, updateMetadataDisplay, updatePlaybackStateIcon } fr
 import { createVolumeItem, onVolumeChanged } from './modules/volumeControl.js';
 import { createScrollableSection, createStationMenuItem, refreshStationsMenu } from './modules/stationMenu.js';
 import PlaybackManager from './modules/playbackManager.js';
-import { setupMediaKeys, cleanupMediaKeys } from './modules/mediaKeys.js';
 
 const Indicator = GObject.registerClass(
     class Indicator extends PanelMenu.Button {
@@ -168,14 +167,6 @@ const Indicator = GObject.registerClass(
             this._playbackManager.stop();
         }
 
-        handleMediaPlayPause() {
-            this._togglePlayback();
-        }
-
-        handleMediaStop() {
-            this._stopPlayback();
-        }
-
         destroy() {
             this._playbackManager.destroy();
 
@@ -202,6 +193,7 @@ export default class YetAnotherRadioExtension extends Extension {
         ensureStorageFile();
         this._settings = this.getSettings();
         this._indicator = new Indicator([], () => this.openPreferences(), this.path, this._settings);
+
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
         loadStations().then(stations => {
@@ -213,7 +205,6 @@ export default class YetAnotherRadioExtension extends Extension {
         });
 
         this._monitor = this._watchStationsFile();
-        this._setupMediaKeys();
     }
 
     _watchStationsFile() {
@@ -229,24 +220,6 @@ export default class YetAnotherRadioExtension extends Extension {
         return monitor;
     }
 
-    _setupMediaKeys() {
-        const { mediaKeyAccelerators, acceleratorHandlerId, mediaKeysSettingsHandlerId } = setupMediaKeys(this._settings, this._indicator);
-        this._mediaKeyAccelerators = mediaKeyAccelerators;
-        this._acceleratorHandlerId = acceleratorHandlerId;
-        this._mediaKeysSettingsHandlerId = mediaKeysSettingsHandlerId;
-        this._mediaKeysSettingsHandlerId = this._settings?.connect('changed::enable-media-keys', () => {
-            this._cleanupMediaKeys();
-            this._setupMediaKeys();
-        });
-    }
-
-    _cleanupMediaKeys() {
-        const { mediaKeyAccelerators, acceleratorHandlerId, mediaKeysSettingsHandlerId } = cleanupMediaKeys(this._mediaKeyAccelerators, this._acceleratorHandlerId, this._mediaKeysSettingsHandlerId, this._settings);
-        this._mediaKeyAccelerators = mediaKeyAccelerators;
-        this._acceleratorHandlerId = acceleratorHandlerId;
-        this._mediaKeysSettingsHandlerId = mediaKeysSettingsHandlerId;
-    }
-
     disable() {
         if (this._monitor) {
             if (this._monitorHandlerId) {
@@ -256,8 +229,6 @@ export default class YetAnotherRadioExtension extends Extension {
             this._monitor.cancel();
             this._monitor = null;
         }
-
-        this._cleanupMediaKeys();
 
         this._indicator?.destroy();
         this._indicator = null;

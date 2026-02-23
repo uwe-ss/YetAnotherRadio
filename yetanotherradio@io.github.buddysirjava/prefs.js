@@ -712,22 +712,6 @@ const GeneralSettingsPage = GObject.registerClass(
             });
             this.add(generalGroup);
 
-            const mediaKeysRow = new Adw.ActionRow({
-                title: _('Enable Media Keys'),
-                subtitle: _('Use keyboard media keys (Play/Pause, Stop) to control playback'),
-            });
-            mediaKeysRow.set_activatable(false);
-
-            const mediaKeysSwitch = new Gtk.Switch({
-                active: this._settings.get_boolean('enable-media-keys'),
-                valign: 3,
-            });
-            mediaKeysSwitch.connect('notify::active', (sw) => {
-                this._settings.set_boolean('enable-media-keys', sw.active);
-            });
-            mediaKeysRow.add_suffix(mediaKeysSwitch);
-            generalGroup.add(mediaKeysRow);
-
             const playingNotificationRow = new Adw.ActionRow({
                 title: _('Show Playing Notification'),
                 subtitle: _('Show an on-screen notification when starting playback'),
