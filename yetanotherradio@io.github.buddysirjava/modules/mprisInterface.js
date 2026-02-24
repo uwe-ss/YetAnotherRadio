@@ -6,6 +6,7 @@ const MPRIS_OBJECT_PATH = '/org/mpris/MediaPlayer2';
 
 const MPRIS_ROOT_XML = `<node>
     <interface name="org.mpris.MediaPlayer2">
+        <method name="Raise"/>
         <property name="Identity" type="s" access="read"/>
         <property name="CanQuit" type="b" access="read"/>
         <property name="CanRaise" type="b" access="read"/>
@@ -33,11 +34,12 @@ const MPRIS_PLAYER_XML = `<node>
 </node>`;
 
 export default class MprisInterface {
-    constructor(playbackManager, settings, navigateCallback, lastStationCallback) {
+    constructor(playbackManager, settings, navigateCallback, lastStationCallback, raiseCallback) {
         this._playbackManager = playbackManager;
         this._settings = settings;
         this._navigateCallback = navigateCallback ?? null;
         this._lastStationCallback = lastStationCallback ?? null;
+        this._raiseCallback = raiseCallback ?? null;
         this._stationCount = 0;
         this._dbusConnection = null;
         this._rootExported = null;
@@ -79,9 +81,10 @@ export default class MprisInterface {
             this._rootExported = Gio.DBusExportedObject.wrapJSObject(
                 MPRIS_ROOT_XML,
                 {
+                    Raise() { self._raiseCallback?.(); },
                     get Identity() { return 'Yet Another Radio'; },
                     get CanQuit() { return false; },
-                    get CanRaise() { return false; },
+                    get CanRaise() { return true; },
                     get HasTrackList() { return false; },
                 }
             );
