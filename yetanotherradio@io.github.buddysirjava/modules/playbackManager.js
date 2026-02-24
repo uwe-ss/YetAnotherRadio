@@ -75,6 +75,19 @@ export default class PlaybackManager {
         return this._nowPlaying;
     }
 
+    getMPRISMetadata() {
+        const metadata = {};
+
+        if (this._currentMetadata.title) {
+            metadata['xesam:title'] = new GLib.Variant('s', this._currentMetadata.title);
+        }
+        if (this._currentMetadata.artist) {
+            metadata['xesam:artist'] = new GLib.Variant('as', [this._currentMetadata.artist]);
+        }
+
+        return metadata;
+    }
+
     _ensurePlayer() {
         if (this._player) return;
 

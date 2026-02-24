@@ -12,6 +12,7 @@ import { createMetadataItem, updateMetadataDisplay, updatePlaybackStateIcon } fr
 import { createVolumeItem, onVolumeChanged } from './modules/volumeControl.js';
 import { createScrollableSection, createStationMenuItem, refreshStationsMenu } from './modules/stationMenu.js';
 import PlaybackManager from './modules/playbackManager.js';
+import MprisInterface from './modules/mprisInterface.js';
 
 const Indicator = GObject.registerClass(
     class Indicator extends PanelMenu.Button {
@@ -194,6 +195,12 @@ export default class YetAnotherRadioExtension extends Extension {
         this._settings = this.getSettings();
         this._indicator = new Indicator([], () => this.openPreferences(), this.path, this._settings);
 
+        try {
+            this._mpris = new MprisInterface(this._indicator._playbackManager, this._settings);
+        } catch (error) {
+            console.warn('Failed to initialize MPRIS interface:', error);
+        }
+
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
         loadStations().then(stations => {
@@ -228,6 +235,11 @@ export default class YetAnotherRadioExtension extends Extension {
             }
             this._monitor.cancel();
             this._monitor = null;
+        }
+
+        if (this._mpris) {
+            this._mpris.destroy();
+            this._mpris = null;
         }
 
         this._indicator?.destroy();
