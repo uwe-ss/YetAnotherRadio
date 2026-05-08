@@ -26,7 +26,7 @@ export function ensureStorageFile() {
             GLib.file_set_contents(STORAGE_PATH, '[]');
         }
     } catch (error) {
-        console.error('Failed to ensure storage file exists', error);
+        logError(error, 'Failed to ensure storage file exists');
         throw new Error(_('Could not create storage directory. Check file permissions.'));
     }
 }
@@ -35,7 +35,7 @@ export async function loadStations() {
     try {
         ensureStorageFile();
     } catch (error) {
-        console.error('Failed to ensure storage file', error);
+        logError(error, 'Failed to ensure storage file');
         return [];
     }
 
@@ -62,9 +62,9 @@ export async function loadStations() {
             .filter(station => typeof station === 'object' && station)
             .map(_sanitizeStation);
     } catch (error) {
-        console.error('Failed to load stations', error);
+        logError(error, 'Failed to load stations');
         if (error.code === Gio.IOErrorEnum.NOT_FOUND || error.code === GLib.IOErrorEnum.NOT_FOUND) {
-            console.warn('Stations file not found, returning empty list');
+            log('Stations file not found, returning empty list');
             return [];
         }
         return [];
@@ -75,7 +75,7 @@ export function saveStations(stations) {
     try {
         ensureStorageFile();
     } catch (error) {
-        console.error('Failed to ensure storage file', error);
+        logError(error, 'Failed to ensure storage file');
         throw error;
     }
 
@@ -87,7 +87,7 @@ export function saveStations(stations) {
         GLib.file_set_contents(STORAGE_PATH, json);
         return sanitized;
     } catch (error) {
-        console.error('Failed to save stations', error);
+        logError(error, 'Failed to save stations');
         if (error.code === GLib.IOErrorEnum.PERMISSION_DENIED) {
             throw new Error(_('Permission denied. Cannot save stations file.'));
         }
@@ -185,7 +185,7 @@ export class RadioBrowserClient {
                             });
                         });
                     } else {
-                        console.error(`Failed to query ${baseUrl} after ${maxRetries} attempts`, error);
+                        logError(error, `Failed to query ${baseUrl} after ${maxRetries} attempts`);
                     }
                 }
             }
@@ -216,7 +216,7 @@ export class RadioBrowserClient {
                 return;
             }
         } catch (e) {
-            console.warn('Failed to fetch servers from radio-browser.info, using fallbacks', e);
+            logError(e, 'Failed to fetch servers from radio-browser.info, using fallbacks');
         }
 
         this._servers = [

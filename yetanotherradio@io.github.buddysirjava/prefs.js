@@ -444,7 +444,7 @@ const AddStationsPage = GObject.registerClass(
 
                 this._populateResults(stations);
             } catch (error) {
-                console.error('Radio search failed', error);
+                logError(error, 'Radio search failed');
             } finally {
                 this._searching = false;
                 this._searchButton.sensitive = true;
@@ -688,7 +688,7 @@ const AddStationsPage = GObject.registerClass(
                     this._refreshCallback(this._stations);
                 }
             } catch (error) {
-                console.error('Failed to save manual station', error);
+                logError(error, 'Failed to save manual station');
             }
         }
     });
@@ -836,7 +836,7 @@ const GeneralSettingsPage = GObject.registerClass(
                                 );
                                 this._showToast(_('Stations exported successfully'));
                             } catch (error) {
-                                console.error('Export failed', error);
+                                logError(error, 'Export failed');
                                 this._showToast(_('Failed to export stations'));
                             }
                         }
@@ -849,7 +849,7 @@ const GeneralSettingsPage = GObject.registerClass(
                 }
                 fileChooser.show();
             } catch (error) {
-                console.error('Export failed', error);
+                logError(error, 'Export failed');
                 this._showToast(_('Failed to export stations'));
             }
         }
@@ -890,7 +890,7 @@ const GeneralSettingsPage = GObject.registerClass(
                                 this._refreshCallback(this._stations);
                             }
                         } catch (error) {
-                            console.error('Import failed', error);
+                            logError(error, 'Import failed');
                             this._showToast(_('Failed to import stations. Invalid file format.'));
                         }
                     }
@@ -924,7 +924,7 @@ export default class YetAnotherRadioPreferences extends ExtensionPreferences {
         loadStations().then(stations => {
             refreshCallback(stations);
         }).catch(error => {
-            console.error('Failed to load stations in prefs:', error);
+            logError(error, 'Failed to load stations in prefs');
             refreshCallback([]);
         });
 

@@ -79,9 +79,8 @@ function _copyToClipboard(text) {
         return;
 
     try {
-        St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, value);
-        const preview = value.length > 80 ? `${value.slice(0, 77)}…` : value;
-        Main.notify(_('Copied to clipboard'), GLib.markup_escape_text(preview, -1));
+        const preview = value.length > 80 ? `${value.slice(0, 77)}...` : value;
+        Main.notify(_('Track info'), GLib.markup_escape_text(preview, -1));
     } catch (e) {
         console.debug('Failed to copy to clipboard:', e);
     }
